@@ -25,7 +25,13 @@ export type AnalyzeImageResponse = {
   notes: string[];
 };
 
-export type ScanStatus = "idle" | "image_selected" | "analyzing" | "success" | "error";
+export type ScanStatus =
+  | "idle"
+  | "image_selected"
+  | "analyzing"
+  | "confirming"
+  | "confirmed"
+  | "error";
 
 export type ScanState = {
   status: ScanStatus;
@@ -53,6 +59,9 @@ export type ScanAction =
   | {
       type: "ANALYSIS_SUCCESS";
       result: AnalyzeImageResponse;
+    }
+  | {
+      type: "MEAL_CONFIRMED";
     }
   | {
       type: "ANALYSIS_ERROR";

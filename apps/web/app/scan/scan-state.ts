@@ -54,8 +54,14 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
     case "ANALYSIS_SUCCESS":
       return {
         ...state,
-        status: "success",
+        status: "confirming",
         result: action.result,
+        error: null,
+      };
+    case "MEAL_CONFIRMED":
+      return {
+        ...state,
+        status: "confirmed",
         error: null,
       };
     case "ANALYSIS_ERROR":
