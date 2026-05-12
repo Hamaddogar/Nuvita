@@ -53,12 +53,12 @@ export default async function DashboardPage() {
         >
           Scan Meal
         </Link>
-        <button
-          type="button"
-          className="rounded-2xl border bg-card px-4 py-3 text-sm font-medium"
+        <Link
+          href="/scan"
+          className="rounded-2xl border bg-card px-4 py-3 text-center text-sm font-medium"
         >
           Add Meal
-        </button>
+        </Link>
       </section>
     </main>
   );
