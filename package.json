@@ -11,6 +11,6 @@
     "build:web": "npm run build --workspace=@ai-diet/web",
     "lint:web": "npm run lint --workspace=@ai-diet/web",
     "dev:api": "python -m uvicorn main:app --reload --app-dir apps/api",
-    "check:api": "python -c \"from main import app\""
+    "check:api": "python -c \"import sys; sys.path.insert(0, r'apps/api'); from main import app\""
   }
 }

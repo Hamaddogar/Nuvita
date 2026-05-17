@@ -1,14 +1,16 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import { AnalysisLoadingCard } from "./_components/analysis-loading-card";
 import { MealConfirmationScreen } from "./_components/meal-confirmation-screen";
+import { SaveSuccessCard } from "./_components/save-success-card";
 import { ScanInputCard } from "./_components/scan-input-card";
 import { analyzeMealImage } from "./analyze-image-client";
 import type { ConfirmedMeal } from "./meal-confirmation-types";
 import { initialScanState, scanReducer } from "./scan-state";
+import { useSaveMeal } from "./use-save-meal";
 
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
@@ -24,7 +26,7 @@ const statusLabel: Record<(typeof initialScanState)["status"], string> = {
 export default function ScanPage() {
   const [state, dispatch] = useReducer(scanReducer, initialScanState);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [confirmedMeal, setConfirmedMeal] = useState<ConfirmedMeal | null>(null);
+  const { saveState, saveConfirmedMeal, resetSaveState } = useSaveMeal();
 
   useEffect(() => {
     if (!state.selectedFile) {
@@ -41,27 +43,31 @@ export default function ScanPage() {
   }, [state.selectedFile]);
 
   const isConfirmationStep = Boolean(state.result) && ["confirming", "confirmed"].includes(state.status);
+  const saveSucceeded = saveState.status === "success" && Boolean(saveState.data);
 
-  const handleFileSelect = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      dispatch({
-        type: "SET_ERROR",
-        message: "Please choose a valid image file.",
-      });
-      return;
-    }
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        dispatch({
+          type: "SET_ERROR",
+          message: "Please choose a valid image file.",
+        });
+        return;
+      }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      dispatch({
-        type: "SET_ERROR",
-        message: "Image is too large. Maximum allowed size is 8MB.",
-      });
-      return;
-    }
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        dispatch({
+          type: "SET_ERROR",
+          message: "Image is too large. Maximum allowed size is 8MB.",
+        });
+        return;
+      }
 
-    setConfirmedMeal(null);
-    dispatch({ type: "SELECT_IMAGE", file });
-  }, []);
+      resetSaveState();
+      dispatch({ type: "SELECT_IMAGE", file });
+    },
+    [resetSaveState]
+  );
 
   const handleAnalyze = useCallback(async () => {
     if (!state.selectedFile) {
@@ -72,7 +78,7 @@ export default function ScanPage() {
       return;
     }
 
-    setConfirmedMeal(null);
+    resetSaveState();
     dispatch({ type: "START_ANALYSIS" });
     try {
       const result = await analyzeMealImage({
@@ -89,18 +95,23 @@ export default function ScanPage() {
             : "Unexpected error while analyzing your meal. Please retry.",
       });
     }
-  }, [state.portionHint, state.selectedFile]);
+  }, [resetSaveState, state.portionHint, state.selectedFile]);
 
-  const handleConfirmMeal = useCallback((meal: ConfirmedMeal) => {
-    setConfirmedMeal(meal);
-    console.log("confirmedMeal", meal);
-    dispatch({ type: "MEAL_CONFIRMED" });
-  }, []);
+  const handleConfirmMeal = useCallback(
+    async (meal: ConfirmedMeal) => {
+      const saved = await saveConfirmedMeal(meal);
+      if (!saved) {
+        return;
+      }
+      dispatch({ type: "MEAL_CONFIRMED" });
+    },
+    [saveConfirmedMeal]
+  );
 
   const handleScanAnother = useCallback(() => {
-    setConfirmedMeal(null);
+    resetSaveState();
     dispatch({ type: "REMOVE_IMAGE" });
-  }, []);
+  }, [resetSaveState]);
 
   return (
     <PageShell
@@ -121,7 +132,7 @@ export default function ScanPage() {
               portionHint={state.portionHint}
               onSelectFile={handleFileSelect}
               onRemoveImage={() => {
-                setConfirmedMeal(null);
+                resetSaveState();
                 dispatch({ type: "REMOVE_IMAGE" });
               }}
               onPortionHintChange={(value) => dispatch({ type: "SET_PORTION_HINT", value })}
@@ -150,10 +161,14 @@ export default function ScanPage() {
               </div>
             </section>
 
-            {state.result ? (
+            {saveSucceeded && saveState.data ? (
+              <SaveSuccessCard savedMeal={saveState.data} onLogAnotherMeal={handleScanAnother} />
+            ) : state.result ? (
               <MealConfirmationScreen
                 analysisResult={state.result}
                 imageUrl={previewUrl}
+                saveStatus={saveState.status}
+                saveError={saveState.status === "error" ? saveState.error : null}
                 onConfirmMeal={handleConfirmMeal}
               />
             ) : null}
@@ -179,23 +194,6 @@ export default function ScanPage() {
                     Retry
                   </button>
                 ) : null}
-              </div>
-            </div>
-          </section>
-        ) : null}
-
-        {confirmedMeal ? (
-          <section className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-200">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Meal confirmed and ready for Step 4 save flow.</p>
-                <p className="text-xs">
-                  A clean <code>confirmedMeal</code> payload has been prepared and logged.
-                </p>
-                <pre className="overflow-x-auto rounded-xl border bg-white/80 p-3 text-[11px] text-emerald-950 dark:bg-black/30 dark:text-emerald-100">
-                  {JSON.stringify(confirmedMeal, null, 2)}
-                </pre>
               </div>
             </div>
           </section>

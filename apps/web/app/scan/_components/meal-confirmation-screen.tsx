@@ -11,6 +11,7 @@ import {
 } from "../meal-confirmation-state";
 import type { MealDraftValidation, ConfirmedMeal } from "../meal-confirmation-types";
 import type { AnalyzeImageResponse } from "../types";
+import type { SaveMealStatus } from "../use-save-meal";
 import { ConfirmMealButton } from "./confirm-meal-button";
 import { EditableFoodItemCard } from "./editable-food-item-card";
 import { MacroSummaryCard } from "./macro-summary-card";
@@ -25,12 +26,16 @@ const EMPTY_VALIDATION: MealDraftValidation = {
 type MealConfirmationScreenProps = {
   analysisResult: AnalyzeImageResponse;
   imageUrl: string | null;
+  saveStatus: SaveMealStatus;
+  saveError: string | null;
   onConfirmMeal: (meal: ConfirmedMeal) => void;
 };
 
 export function MealConfirmationScreen({
   analysisResult,
   imageUrl,
+  saveStatus,
+  saveError,
   onConfirmMeal,
 }: MealConfirmationScreenProps) {
   const [draft, dispatch] = useReducer(
@@ -62,6 +67,9 @@ export function MealConfirmationScreen({
   };
 
   const handleConfirmMeal = () => {
+    if (saveStatus === "saving" || saveStatus === "validating") {
+      return;
+    }
     const nextValidation = validateMealDraft(draft);
     setValidation(nextValidation);
     if (!nextValidation.isValid) {
@@ -191,8 +199,15 @@ export function MealConfirmationScreen({
           </ul>
         </section>
       ) : null}
+      {saveError ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 shadow-sm dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+          <h3 className="text-sm font-semibold">Meal could not be saved</h3>
+          <p className="mt-1 text-xs">{saveError}</p>
+          <p className="mt-1 text-xs">Your edits are preserved. Fix and retry when ready.</p>
+        </section>
+      ) : null}
 
-      <ConfirmMealButton onConfirm={handleConfirmMeal} />
+      <ConfirmMealButton status={saveStatus} onConfirm={handleConfirmMeal} />
     </section>
   );
 }
