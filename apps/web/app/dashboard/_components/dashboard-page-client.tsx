@@ -8,6 +8,7 @@ import { DashboardEmptyState } from "./dashboard-empty-state";
 import { DashboardErrorState } from "./dashboard-error-state";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { MacroProgressGrid } from "./macro-progress-grid";
+import { TodayCoachingPreview } from "./today-coaching-preview";
 import { TodayMealsList } from "./today-meals-list";
 import { useDailySummary } from "../use-daily-summary";
 import { formatDashboardDate, getLocalDateISO } from "../utils";
@@ -86,6 +87,7 @@ export function DashboardPageClient({ fullName }: DashboardPageClientProps) {
               remaining={state.data.remaining}
               progress={state.data.progress}
             />
+            <TodayCoachingPreview date={state.data.date} timezone={timezone} />
             {state.status === "empty" ? (
               <DashboardEmptyState />
             ) : (
