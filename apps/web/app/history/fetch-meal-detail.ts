@@ -1,4 +1,5 @@
 import type { MealDetailItem, MealDetailMeal, MealDetailResponse } from "./types";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -175,7 +176,7 @@ export async function fetchMealDetail({
     if (!response.ok) {
       const message = extractErrorMessage(payload);
       if (message) {
-        throw new Error(message);
+        throw new Error(mapApiError(message, "Unable to load meal details right now."));
       }
       if (response.status === 401) {
         throw new Error("Your session has expired. Please sign in again.");
@@ -200,7 +201,7 @@ export async function fetchMealDetail({
       throw new Error("Meal detail request timed out. Please retry.");
     }
     if (error instanceof Error) {
-      throw error;
+      throw new Error(mapApiError(error.message, "Unable to load meal details right now."));
     }
     throw new Error("Unexpected meal detail error. Please retry.");
   } finally {

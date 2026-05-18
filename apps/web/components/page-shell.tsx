@@ -1,39 +1,37 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { NuvitaLogo } from "@/components/nuvita-logo";
 
 export function PageShell({
   title,
   description,
+  showBottomNav = true,
   children,
 }: {
   title: string;
   description: string;
+  showBottomNav?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-8">
-      <header className="mb-6 rounded-3xl border bg-card p-5 shadow-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-      </header>
-      <section className="rounded-3xl border bg-card p-5 shadow-sm">
-        {children ?? (
-          <p className="text-sm text-muted-foreground">
-            This page is scaffolded and ready for feature implementation.
-          </p>
-        )}
-      </section>
-      <nav className="mt-6 grid grid-cols-3 gap-2 text-center text-xs">
-        <Link className="rounded-xl border p-2 hover:bg-muted" href="/dashboard">
-          Dashboard
-        </Link>
-        <Link className="rounded-xl border p-2 hover:bg-muted" href="/scan">
-          Scan
-        </Link>
-        <Link className="rounded-xl border p-2 hover:bg-muted" href="/profile">
-          Profile
-        </Link>
-      </nav>
-    </main>
+    <>
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-6 pb-24">
+        <header className="mb-4 rounded-3xl border border-emerald-100/80 bg-card/95 p-5 shadow-sm dark:border-slate-800">
+          <div className="mb-3">
+            <NuvitaLogo />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{title}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        </header>
+        <section className="rounded-3xl border border-emerald-100/80 bg-card/95 p-5 shadow-sm dark:border-slate-800">
+          {children ?? (
+            <p className="text-sm text-muted-foreground">
+              This page is scaffolded and ready for feature implementation.
+            </p>
+          )}
+        </section>
+      </main>
+      {showBottomNav ? <MobileBottomNav /> : null}
+    </>
   );
 }

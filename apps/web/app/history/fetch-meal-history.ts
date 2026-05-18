@@ -6,6 +6,7 @@ import type {
   MealHistoryResponse,
   MealHistorySummary,
 } from "./types";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -255,7 +256,7 @@ export async function fetchMealHistory({
     if (!response.ok) {
       const message = extractErrorMessage(payload);
       if (message) {
-        throw new Error(message);
+        throw new Error(mapApiError(message, "Unable to load your meal history right now."));
       }
       if (response.status === 401) {
         throw new Error("Your session has expired. Please sign in again.");
@@ -279,7 +280,7 @@ export async function fetchMealHistory({
       throw new Error("Meal history request timed out. Please retry.");
     }
     if (error instanceof Error) {
-      throw error;
+      throw new Error(mapApiError(error.message, "Unable to load your meal history right now."));
     }
     throw new Error("Unexpected meal history error. Please retry.");
   } finally {

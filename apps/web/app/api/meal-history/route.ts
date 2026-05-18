@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         detail: sawBackend404
-          ? "Meal history endpoint is missing on the running backend. Restart FastAPI with latest code."
+          ? "Meal history is temporarily unavailable while services update."
           : "Unable to reach meal history backend. Please try again shortly.",
       },
       { status: sawBackend404 ? 503 : 502 }

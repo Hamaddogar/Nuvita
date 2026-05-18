@@ -17,7 +17,7 @@ class MealTotals(BaseModel):
 
 
 class MealItemCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=120)
     quantity_estimate: str | None = Field(default=None, max_length=120)
@@ -37,7 +37,7 @@ class MealItemCreateRequest(BaseModel):
 
 
 class MealCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     meal_name: str = Field(min_length=1, max_length=120)
     meal_type: MealType

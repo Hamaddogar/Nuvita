@@ -16,6 +16,24 @@ from services.supabase_meals import (
 router = APIRouter(tags=["ai-insights"])
 
 
+def _sanitize_supabase_error(exc: SupabaseServiceError, *, fallback_message: str) -> tuple[int, str]:
+    normalized = exc.message.lower()
+
+    if exc.status_code == 401:
+        return 401, "Authentication required. Please sign in again."
+
+    if exc.status_code == 422 and "date must be in yyyy-mm-dd format" in normalized:
+        return 422, "date must be in YYYY-MM-DD format."
+
+    if exc.status_code >= 500:
+        return 502, fallback_message
+
+    if exc.status_code == 422:
+        return 422, "Request data is invalid. Please review your input and try again."
+
+    return exc.status_code, fallback_message
+
+
 @router.get("/ai-insights/today", response_model=AIInsightsTodayResponse)
 async def get_ai_insights_today(
     date: str | None = Query(default=None),
@@ -33,11 +51,15 @@ async def get_ai_insights_today(
         )
         return AIInsightsTodayResponse.model_validate(payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to load today insights right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid today insights response from persistence layer: {exc.errors()}",
+            detail="Today insights service returned an invalid response.",
         ) from exc
 
 
@@ -58,9 +80,13 @@ async def get_ai_insights_weekly(
         )
         return AIInsightsWeeklyResponse.model_validate(payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to load weekly insights right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid weekly insights response from persistence layer: {exc.errors()}",
+            detail="Weekly insights service returned an invalid response.",
         ) from exc

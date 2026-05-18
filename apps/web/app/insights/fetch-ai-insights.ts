@@ -6,6 +6,7 @@ import type {
   InsightSource,
   InsightType,
 } from "./types";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -391,7 +392,7 @@ async function fetchInsights<T>({
     if (!response.ok) {
       const message = extractErrorMessage(payload);
       if (message) {
-        throw new Error(message);
+        throw new Error(mapApiError(message, "Unable to load insights right now."));
       }
       if (response.status === 401) {
         throw new Error("Your session has expired. Please sign in again.");
@@ -415,7 +416,7 @@ async function fetchInsights<T>({
       throw new Error("Insights request timed out. Please retry.");
     }
     if (error instanceof Error) {
-      throw error;
+      throw new Error(mapApiError(error.message, "Unable to load insights right now."));
     }
     throw new Error("Unexpected insights error. Please retry.");
   } finally {

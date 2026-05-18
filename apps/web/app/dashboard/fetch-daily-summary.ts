@@ -6,6 +6,7 @@ import type {
   DailyRemainingTotals,
   DailySummaryResponse,
 } from "./types";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -191,7 +192,7 @@ export async function fetchDailySummary({
     if (!response.ok) {
       const message = extractErrorMessage(payload);
       if (message) {
-        throw new Error(message);
+        throw new Error(mapApiError(message, "Unable to load your dashboard right now."));
       }
       if (response.status === 401) {
         throw new Error("Your session has expired. Please sign in again.");
@@ -215,7 +216,7 @@ export async function fetchDailySummary({
       throw new Error("Dashboard request timed out. Please retry.");
     }
     if (error instanceof Error) {
-      throw error;
+      throw new Error(mapApiError(error.message, "Unable to load your dashboard right now."));
     }
     throw new Error("Unexpected dashboard error. Please retry.");
   } finally {

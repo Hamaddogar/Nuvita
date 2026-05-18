@@ -80,7 +80,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         detail: sawBackend404
-          ? "Meal detail endpoint is missing on the running backend. Restart FastAPI with latest code."
+          ? "Meal details are temporarily unavailable while services update."
           : "Unable to reach meal detail backend. Please try again shortly.",
       },
       { status: sawBackend404 ? 503 : 502 }

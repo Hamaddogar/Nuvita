@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { HistoryDateNavigator } from "./history-date-navigator";
 import { HistoryEmptyState } from "./history-empty-state";
 import { HistoryErrorState } from "./history-error-state";
@@ -90,57 +91,60 @@ export function HistoryPageClient({ fullName }: HistoryPageClientProps) {
   const summaryData = state.status === "success" || state.status === "empty" ? state.data : null;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-4 py-6 pb-10">
-      <div className="space-y-4">
-        <HistoryHeader fullName={fullName} />
+    <>
+      <main className="mx-auto min-h-screen w-full max-w-md px-4 py-6 pb-24">
+        <div className="space-y-4">
+          <HistoryHeader fullName={fullName} />
 
-        <HistoryDateNavigator
-          dateLabel={dateLabel}
-          isToday={isToday}
-          canGoNext={canGoNext}
-          isLoading={state.status === "loading"}
-          onPrevious={goToPreviousDate}
-          onNext={goToNextDate}
-          onToday={goToToday}
-          onRefresh={refresh}
+          <HistoryDateNavigator
+            dateLabel={dateLabel}
+            isToday={isToday}
+            canGoNext={canGoNext}
+            isLoading={state.status === "loading"}
+            onPrevious={goToPreviousDate}
+            onNext={goToNextDate}
+            onToday={goToToday}
+            onRefresh={refresh}
+          />
+
+          {state.status === "loading" ? <HistorySkeleton /> : null}
+          {state.status === "error" ? <HistoryErrorState message={state.error} onRetry={refresh} /> : null}
+
+          {summaryData ? (
+            <>
+              <HistorySummaryCard
+                summary={summaryData.summary}
+                goals={summaryData.goals}
+                remaining={summaryData.remaining}
+                progress={summaryData.progress}
+              />
+
+              {state.status === "empty" ? (
+                <HistoryEmptyState dateLabel={dateLabel} />
+              ) : (
+                <HistoryMealsList meals={summaryData.meals} onSelectMeal={setSelectedMealId} />
+              )}
+            </>
+          ) : null}
+
+          <section className="sticky bottom-20 rounded-2xl border border-emerald-100/80 bg-card/95 p-3 shadow-sm dark:border-slate-800">
+            <Link
+              href="/scan"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+            >
+              Scan New Meal
+            </Link>
+          </section>
+        </div>
+
+        <MealDetailSheet
+          mealId={selectedMealId}
+          state={mealDetailState}
+          onClose={() => setSelectedMealId(null)}
+          onRetry={refreshMealDetail}
         />
-
-        {state.status === "loading" ? <HistorySkeleton /> : null}
-        {state.status === "error" ? <HistoryErrorState message={state.error} onRetry={refresh} /> : null}
-
-        {summaryData ? (
-          <>
-            <HistorySummaryCard
-              summary={summaryData.summary}
-              goals={summaryData.goals}
-              remaining={summaryData.remaining}
-              progress={summaryData.progress}
-            />
-
-            {state.status === "empty" ? (
-              <HistoryEmptyState dateLabel={dateLabel} />
-            ) : (
-              <HistoryMealsList meals={summaryData.meals} onSelectMeal={setSelectedMealId} />
-            )}
-          </>
-        ) : null}
-
-        <section className="sticky bottom-4 rounded-2xl border bg-card p-3 shadow-sm">
-          <Link
-            href="/scan"
-            className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
-          >
-            Scan New Meal
-          </Link>
-        </section>
-      </div>
-
-      <MealDetailSheet
-        mealId={selectedMealId}
-        state={mealDetailState}
-        onClose={() => setSelectedMealId(null)}
-        onRetry={refreshMealDetail}
-      />
-    </main>
+      </main>
+      <MobileBottomNav />
+    </>
   );
 }

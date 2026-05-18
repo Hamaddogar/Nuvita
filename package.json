@@ -10,6 +10,8 @@
     "dev:web": "npm run dev --workspace=@ai-diet/web",
     "build:web": "npm run build --workspace=@ai-diet/web",
     "lint:web": "npm run lint --workspace=@ai-diet/web",
+    "test:web": "npm run test --workspace=@ai-diet/web",
+    "test:api": "python -m pytest apps/api/tests -q",
     "dev:api": "python -m uvicorn main:app --reload --app-dir apps/api",
     "check:api": "python -c \"import sys; sys.path.insert(0, r'apps/api'); from main import app\""
   }

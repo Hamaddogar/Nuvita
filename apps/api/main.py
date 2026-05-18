@@ -12,7 +12,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from openai import AsyncOpenAI, OpenAIError
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from routes.insights import router as insights_router
 from routes.meals import router as meals_router
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -75,9 +75,18 @@ _openai_client: AsyncOpenAI | None = None
 
 
 class AnalyzeImageJSONPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     image_url: str | None = None
     image_base64: str | None = None
-    user_portion_description: str | None = None
+    user_portion_description: str | None = Field(default=None, max_length=400)
+
+    @model_validator(mode="after")
+    def validate_image_source(self) -> "AnalyzeImageJSONPayload":
+        has_image_url = bool(self.image_url and self.image_url.strip())
+        has_image_base64 = bool(self.image_base64 and self.image_base64.strip())
+        if has_image_url and has_image_base64:
+            raise ValueError("Provide either image_base64 or image_url, not both.")
+        return self
 
 
 class NutritionEstimate(BaseModel):
@@ -134,6 +143,24 @@ class AnalyzeImageResponse(BaseModel):
 @app.get("/health")
 def health_check() -> dict:
     return {"status": "ok", "service": "ai-diet-api"}
+
+def _format_payload_validation_error(exc: ValidationError) -> str:
+    messages: list[str] = []
+    for issue in exc.errors():
+        message = issue.get("msg")
+        location = issue.get("loc")
+        if not isinstance(message, str) or not message.strip():
+            continue
+        if isinstance(location, tuple) and location:
+            formatted_location = ".".join(str(part) for part in location if str(part).strip())
+            if formatted_location:
+                messages.append(f"{formatted_location}: {message.strip()}")
+                continue
+        messages.append(message.strip())
+
+    if messages:
+        return "; ".join(dict.fromkeys(messages))
+    return "Invalid JSON payload. Provide image_base64 or image_url."
 
 
 def _round_macro(value: float) -> float:
@@ -221,7 +248,7 @@ async def _extract_image_from_url(image_url: str) -> tuple[bytes, str]:
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to download image from image_url: {exc}",
+            detail="Unable to download image from image_url.",
         ) from exc
 
     mime_type = _validate_and_normalize_image(
@@ -244,14 +271,14 @@ def _extract_json_from_model_output(raw_text: str) -> dict[str, Any]:
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
-        raise ValueError("OpenAI returned invalid JSON.") from exc
+        raise ValueError("AI analysis returned an invalid response format.") from exc
 
 
 def _get_openai_client() -> AsyncOpenAI:
     global _openai_client
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
+        raise RuntimeError("AI analysis service is not configured.")
 
     if _openai_client is None:
         _openai_client = AsyncOpenAI(api_key=api_key)
@@ -312,18 +339,18 @@ async def analyze_image_with_openai(
             max_output_tokens=1400,
         )
     except OpenAIError as exc:
-        raise RuntimeError(f"OpenAI API failure: {exc}") from exc
+        raise RuntimeError("AI analysis service is temporarily unavailable.") from exc
 
     raw_text = (response.output_text or "").strip()
     if not raw_text:
-        raise ValueError("OpenAI returned an empty response.")
+        raise ValueError("AI analysis returned an empty response.")
 
     parsed = _extract_json_from_model_output(raw_text)
 
     try:
         return OpenAIAnalysisResult.model_validate(parsed)
     except ValidationError as exc:
-        raise ValueError("OpenAI response schema validation failed.") from exc
+        raise ValueError("AI analysis response schema validation failed.") from exc
 
 
 def _extract_usda_macros(food: dict[str, Any]) -> dict[str, float | None]:
@@ -406,7 +433,7 @@ def _select_best_usda_match(food_name: str, foods: list[dict[str, Any]]) -> dict
 async def lookup_usda_food(food_name: str) -> dict[str, Any] | None:
     api_key = os.getenv("USDA_API_KEY")
     if not api_key:
-        raise RuntimeError("USDA_API_KEY is not configured.")
+        raise RuntimeError("Nutrition reference service is not configured.")
 
     payload = {"query": food_name, "pageSize": 8}
     params = {"api_key": api_key}
@@ -416,7 +443,7 @@ async def lookup_usda_food(food_name: str) -> dict[str, Any] | None:
             response = await client.post(USDA_SEARCH_URL, params=params, json=payload)
             response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise RuntimeError(f"USDA API failure: {exc}") from exc
+        raise RuntimeError("Nutrition reference lookup is temporarily unavailable.") from exc
 
     foods = (response.json() or {}).get("foods") or []
     if not foods:
@@ -488,7 +515,7 @@ async def _extract_request_image(
         try:
             payload = AnalyzeImageJSONPayload.model_validate(payload_data)
         except ValidationError as exc:
-            raise HTTPException(status_code=422, detail=exc.errors()) from exc
+            raise HTTPException(status_code=422, detail=_format_payload_validation_error(exc)) from exc
 
         if payload.image_base64:
             image_bytes, mime_type = _decode_base64_image(payload.image_base64)
@@ -544,11 +571,21 @@ async def analyze_image(request: Request) -> AnalyzeImageResponse:
             user_portion_description=portion_hint,
         )
     except RuntimeError as exc:
-        detail = str(exc)
-        status_code = 500 if "OPENAI_API_KEY" in detail else 502
-        raise HTTPException(status_code=status_code, detail=detail) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        detail = str(exc).lower()
+        if "not configured" in detail:
+            raise HTTPException(
+                status_code=503,
+                detail="AI analysis service is not configured.",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail="AI analysis service is temporarily unavailable.",
+        ) from exc
+    except ValueError:
+        raise HTTPException(
+            status_code=502,
+            detail="AI analysis service returned an invalid response. Please retry.",
+        )
 
     if not ai_analysis.foods:
         raise HTTPException(status_code=422, detail="No food detected in the provided image.")
@@ -564,8 +601,10 @@ async def analyze_image(request: Request) -> AnalyzeImageResponse:
 
         try:
             usda_match = await lookup_usda_food(ai_food.name)
-        except RuntimeError as exc:
-            notes.append(f"USDA lookup failed for '{ai_food.name}': {exc}")
+        except RuntimeError:
+            notes.append(
+                f"Nutrition reference data was unavailable for '{ai_food.name}'. Used AI estimate."
+            )
             usda_match = None
 
         if usda_match:

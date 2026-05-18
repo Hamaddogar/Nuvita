@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth-card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { mapAuthError } from "@/lib/user-facing-errors";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function LoginPage() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(mapAuthError(signInError.message));
       setLoading(false);
       return;
     }
@@ -82,6 +83,7 @@ export default function LoginPage() {
           <input
             required
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
@@ -92,6 +94,7 @@ export default function LoginPage() {
           <input
             required
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
@@ -103,7 +106,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
       <div className="space-y-2">
@@ -125,7 +128,7 @@ export default function LoginPage() {
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/signup" className="font-medium text-foreground underline">
-          Sign up
+          Create account
         </Link>
       </p>
     </AuthCard>

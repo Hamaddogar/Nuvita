@@ -82,11 +82,10 @@ export async function GET(request: Request) {
         fallbackReason,
       });
       return NextResponse.json(fallbackPayload, { status: 200 });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to build weekly fallback AI insights.";
+    } catch {
       return NextResponse.json(
         {
-          detail: `Unable to reach weekly AI insights backend and fallback failed: ${message}`,
+          detail: "We couldn't load weekly coaching insights right now. Please try again shortly.",
         },
         { status: 502 }
       );

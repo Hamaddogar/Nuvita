@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { NuvitaLogo } from "@/components/nuvita-logo";
 import { AIInsightSkeleton } from "./ai-insight-skeleton";
 import { InsightsEmptyState } from "./insights-empty-state";
 import { InsightsErrorState } from "./insights-error-state";
@@ -62,65 +64,71 @@ export function InsightsPageClient({ fullName }: InsightsPageClientProps) {
   const isRefreshing = todayState.status === "loading" || weeklyState.status === "loading";
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-4 py-6 pb-10">
-      <div className="space-y-4">
-        <header className="rounded-3xl border bg-card p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">AI insights & coaching</p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">Hi, {firstName(fullName)}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {dateLabel} • Goal: {goalTypeLabel}
-              </p>
+    <>
+      <main className="mx-auto min-h-screen w-full max-w-md px-4 py-6 pb-24">
+        <div className="space-y-4">
+          <header className="rounded-3xl border border-emerald-100/80 bg-card/95 p-5 shadow-sm dark:border-slate-800">
+            <div className="mb-3">
+              <NuvitaLogo />
             </div>
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={isRefreshing}
-              className="inline-flex items-center gap-1 rounded-xl border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-60"
-            >
-              {isRefreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {isRefreshing ? "Refreshing" : "Refresh"}
-            </button>
-          </div>
-        </header>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">AI insights & coaching</p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight">Hi, {firstName(fullName)}</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {dateLabel} • Goal: {goalTypeLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={refresh}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-1 rounded-xl border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-60"
+              >
+                {isRefreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {isRefreshing ? "Refreshing" : "Refresh"}
+              </button>
+            </div>
+          </header>
 
-        {bothLoading ? <AIInsightSkeleton /> : null}
+          {bothLoading ? <AIInsightSkeleton /> : null}
 
-        {bothError ? (
-          <InsightsErrorState
-            message={`${todayState.error || "Unable to load today insights."} ${weeklyState.error || ""}`.trim()}
-            onRetry={refresh}
-          />
-        ) : null}
-
-        {!bothError && weeklyData ? <WeeklySummaryCard summary={weeklyData.summary} /> : null}
-
-        {!bothError && todayData ? (
-          todayData.insights.length === 0 ? (
-            <InsightsEmptyState />
-          ) : (
-            <InsightsFeed
-              insights={todayData.insights}
-              source={todayData.source}
-              fallbackReason={todayData.fallback_reason}
+          {bothError ? (
+            <InsightsErrorState
+              message={`${todayState.error || "Unable to load today insights."} ${weeklyState.error || ""}`.trim()}
+              onRetry={refresh}
             />
-          )
-        ) : null}
+          ) : null}
 
-        {!bothError && !todayData && todayState.status === "error" ? (
-          <InsightsErrorState message={todayState.error} onRetry={refreshToday} />
-        ) : null}
+          {!bothError && weeklyData ? <WeeklySummaryCard summary={weeklyData.summary} /> : null}
 
-        <section className="sticky bottom-4 rounded-2xl border bg-card p-3 shadow-sm">
-          <Link
-            href="/scan"
-            className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
-          >
-            Scan Meal
-          </Link>
-        </section>
-      </div>
-    </main>
+          {!bothError && todayData ? (
+            todayData.insights.length === 0 ? (
+              <InsightsEmptyState />
+            ) : (
+              <InsightsFeed
+                insights={todayData.insights}
+                source={todayData.source}
+                fallbackReason={todayData.fallback_reason}
+              />
+            )
+          ) : null}
+
+          {!bothError && !todayData && todayState.status === "error" ? (
+            <InsightsErrorState message={todayState.error} onRetry={refreshToday} />
+          ) : null}
+
+          <section className="sticky bottom-20 rounded-2xl border border-emerald-100/80 bg-card/95 p-3 shadow-sm dark:border-slate-800">
+            <Link
+              href="/scan"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+            >
+              Scan Meal
+            </Link>
+          </section>
+        </div>
+      </main>
+      <MobileBottomNav />
+    </>
   );
 }

@@ -25,6 +25,31 @@ from services.supabase_meals import (
 router = APIRouter(tags=["meals"])
 
 
+def _sanitize_supabase_error(exc: SupabaseServiceError, *, fallback_message: str) -> tuple[int, str]:
+    normalized = exc.message.lower()
+
+    if exc.status_code == 401:
+        return 401, "Authentication required. Please sign in again."
+
+    if exc.status_code == 404:
+        return 404, "Meal not found."
+
+    if exc.status_code == 422:
+        if "date must be in yyyy-mm-dd format" in normalized:
+            return 422, "date must be in YYYY-MM-DD format."
+        if "meal_id is required" in normalized:
+            return 422, "meal_id is required."
+        return 422, "Request data is invalid. Please review your input and try again."
+
+    if exc.status_code == 503:
+        return 503, "Meal saving is temporarily unavailable. Please try again shortly."
+
+    if exc.status_code >= 500:
+        return 502, fallback_message
+
+    return exc.status_code, fallback_message
+
+
 @router.get("/daily-summary", response_model=DailySummaryResponse)
 async def get_daily_summary(
     date: str | None = Query(default=None),
@@ -42,11 +67,15 @@ async def get_daily_summary(
         )
         return DailySummaryResponse.model_validate(summary_payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to load daily summary right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid daily summary response from persistence layer: {exc.errors()}",
+            detail="Daily summary service returned an invalid response.",
         ) from exc
 
 
@@ -67,11 +96,15 @@ async def get_meal_history(
         )
         return MealHistoryResponse.model_validate(history_payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to load meal history right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid meal history response from persistence layer: {exc.errors()}",
+            detail="Meal history service returned an invalid response.",
         ) from exc
 
 
@@ -90,11 +123,15 @@ async def get_meal_detail(
         )
         return MealDetailResponse.model_validate(detail_payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to load meal details right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid meal detail response from persistence layer: {exc.errors()}",
+            detail="Meal detail service returned an invalid response.",
         ) from exc
 
 
@@ -109,9 +146,13 @@ async def create_meal(
         saved_payload = await create_meal_via_rpc(access_token, payload)
         return MealCreateResponse.model_validate(saved_payload)
     except SupabaseServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        status_code, detail = _sanitize_supabase_error(
+            exc,
+            fallback_message="Unable to save meal right now.",
+        )
+        raise HTTPException(status_code=status_code, detail=detail) from exc
     except ValidationError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Invalid save response from persistence layer: {exc.errors()}",
+            detail="Meal save service returned an invalid response.",
         ) from exc

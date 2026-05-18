@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     });
   } catch {
     return NextResponse.json(
-      { detail: "Unable to reach analysis backend. Make sure FastAPI is running." },
+      { detail: "Analysis service is currently unavailable. Please try again shortly." },
       { status: 502 }
     );
   }

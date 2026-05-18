@@ -10,7 +10,9 @@ import {
 } from "@ai-diet/shared";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { NuvitaLogo } from "@/components/nuvita-logo";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -130,7 +132,7 @@ export default function OnboardingPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("Session expired. Please login again.");
+      setError("Your session expired. Please log in again.");
       setSaving(false);
       router.replace("/login");
       return;
@@ -153,7 +155,7 @@ export default function OnboardingPage() {
     );
 
     if (profileError) {
-      setError(profileError.message);
+      setError(mapApiError(profileError.message, "We couldn't save your profile. Please try again."));
       setSaving(false);
       return;
     }
@@ -186,7 +188,7 @@ export default function OnboardingPage() {
       : await supabase.from("user_goals").insert(goalPayload);
 
     if (goalResult.error) {
-      setError(goalResult.error.message);
+      setError(mapApiError(goalResult.error.message, "We couldn't save your goals. Please try again."));
       setSaving(false);
       return;
     }
@@ -197,7 +199,13 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md px-4 py-6">
-      <section className="rounded-3xl border bg-card p-5 shadow-sm">
+      <section className="rounded-3xl border border-emerald-100/80 bg-card/95 p-5 shadow-sm dark:border-slate-800">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <NuvitaLogo />
+          <span className="rounded-full border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+            Onboarding
+          </span>
+        </div>
         <div className="mb-5">
           <p className="text-xs text-muted-foreground">Step {step} of 5</p>
           <div className="mt-2 h-2 w-full rounded-full bg-muted">
@@ -392,7 +400,7 @@ export default function OnboardingPage() {
               disabled={saving}
               className="rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Complete Setup"}
+              {saving ? "Saving..." : "Complete setup"}
             </button>
           )}
         </div>

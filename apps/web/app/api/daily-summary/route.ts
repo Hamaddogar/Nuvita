@@ -410,20 +410,19 @@ export async function GET(request: Request) {
         "Supabase dashboard fallback timed out."
       );
       return NextResponse.json(fallbackSummary, { status: 200 });
-    } catch (error) {
-      const fallbackMessage = error instanceof Error ? error.message : "Fallback summary failed.";
+    } catch {
 
       if (sawBackend404) {
         return NextResponse.json(
           {
-            detail: `Dashboard backend is outdated and fallback failed: ${fallbackMessage}`,
+            detail: "Dashboard services are updating. Please try again shortly.",
           },
           { status: 503 }
         );
       }
       return NextResponse.json(
         {
-          detail: `Unable to reach dashboard backend and fallback failed: ${fallbackMessage}`,
+          detail: "We couldn't load your dashboard right now. Please try again shortly.",
         },
         { status: 502 }
       );

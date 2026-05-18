@@ -1,39 +1,43 @@
-# AI Diet FastAPI Service
-
-## Purpose
-FastAPI backend for AI food-image analysis and nutrition estimation.
+# Nuvita FastAPI Service
+FastAPI backend for image-based meal analysis, Supabase-backed meal logging, dashboard/history summaries, and AI coaching insights.
 
 ## Setup
-1. Create a Python virtual environment.
+1. Create and activate a Python virtual environment.
 2. Install dependencies:
    - `python -m pip install -r requirements.txt`
-3. Copy `.env.example` to `.env` and set values:
+3. Copy `.env.example` to `.env` and populate required values:
    - `OPENAI_API_KEY`
    - `USDA_API_KEY`
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - Optional:
+     - `OPENAI_VISION_MODEL`
+     - `OPENAI_INSIGHTS_MODEL`
+     - `SUPABASE_SERVICE_ROLE_KEY`
 4. Run the API:
    - `python -m uvicorn main:app --reload`
 
 ## Endpoints
-- `GET /health`: service health check.
-- `POST /analyze-image`: analyzes a food image with OpenAI Vision, enriches macros with USDA FoodData Central when possible, and returns structured nutrition JSON.
-- `POST /meals`: authenticated meal persistence endpoint that validates and stores confirmed meal + meal items in Supabase transactionally.
-- `GET /daily-summary`: authenticated dashboard summary endpoint for date-scoped goals, consumed totals, remaining macros, progress percentages, and today’s meals.
-- `GET /meal-history`: authenticated history endpoint for selected-day summary + meal list.
-- `GET /meals/{meal_id}`: authenticated endpoint returning full details for one logged meal and its items.
+- `GET /health`: service health status
+- `POST /analyze-image`: meal image analysis + nutrition estimate
+- `POST /meals`: authenticated meal save
+- `GET /daily-summary`: authenticated day-level nutrition summary
+- `GET /meal-history`: authenticated meal timeline for a selected date
+- `GET /meals/{meal_id}`: authenticated meal detail
+- `GET /ai-insights/today`: authenticated daily coaching cards
+- `GET /ai-insights/weekly`: authenticated weekly coaching summary
 
-## `POST /analyze-image` input options
-1. Multipart upload (recommended):
-   - `image` (file)
-   - `user_portion_description` (optional text)
-2. JSON body:
-   - `image_base64` (required for JSON unless `image_url` is provided)
-   - `image_url` (optional)
-   - `user_portion_description` (optional)
+## Input/output behavior highlights
+- Analyze endpoint accepts:
+  1. Multipart (`image`, optional `user_portion_description`)
+  2. JSON (`image_base64` or `image_url`, optional `user_portion_description`)
+- `AnalyzeImageJSONPayload` is strict (`extra="forbid"`).
+- Meal create payloads are strict (`extra="forbid"` for top-level and item objects).
+- Protected endpoints require `Authorization: Bearer <supabase_access_token>`.
+- User-facing errors are sanitized (internal provider/runtime details are not surfaced directly).
 
-## Example curl requests
-Multipart upload:
+## Example requests
+Multipart analyze request:
 ```bash
 curl -X POST "http://localhost:8000/analyze-image" \
   -H "accept: application/json" \
@@ -41,7 +45,7 @@ curl -X POST "http://localhost:8000/analyze-image" \
   -F "user_portion_description=1 full plate"
 ```
 
-JSON with base64 image:
+JSON analyze request:
 ```bash
 curl -X POST "http://localhost:8000/analyze-image" \
   -H "accept: application/json" \
@@ -49,82 +53,15 @@ curl -X POST "http://localhost:8000/analyze-image" \
   -d "{\"image_base64\":\"<BASE64_IMAGE>\",\"user_portion_description\":\"about one bowl\"}"
 ```
 
-## Response shape
-The endpoint returns:
-- `success`
-- `detected_foods[]` with `name`, `quantity_estimate`, `estimated_grams`, `calories`, `protein_g`, `carbs_g`, `fat_g`, `confidence`, optional `usda_match`
-- `total` with aggregated macros
-- `notes` with warnings/assumptions
+## Test commands
+- From repo root:
+  - `npm run test:api`
+- Directly in API context:
+  - `python -m pytest tests -q`
 
-## `POST /meals` request
-Requires `Authorization: Bearer <supabase_access_token>`.
-
-Body:
-- `meal_name`
-- `meal_type` (`breakfast` | `lunch` | `dinner` | `snack`)
-- `eaten_at` (ISO datetime)
-- `notes` (optional)
-- `items[]` with `name`, `quantity_estimate`, `estimated_grams`, `calories`, `protein_g`, `carbs_g`, `fat_g`, `confidence`, `source`
-
-Returns:
-- `success`
-- `meal_id`
-- `meal`
-- `items[]`
-- `totals`
-
-## `GET /daily-summary` request
-Requires `Authorization: Bearer <supabase_access_token>`.
-
-Query params:
-- `date` (optional, `YYYY-MM-DD`, defaults to current date)
-- `timezone` (optional IANA timezone, e.g. `Asia/Kolkata`; defaults to UTC)
-
-Returns:
-- `success`
-- `date`
-- `goals` (`calories`, `protein_g`, `carbs_g`, `fat_g`)
-- `consumed`
-- `remaining`
-- `progress` percentages
-- `meals[]` for the selected day with macro totals and `item_count`
-
-## `GET /meal-history` request
-Requires `Authorization: Bearer <supabase_access_token>`.
-
-Query params:
-- `date` (optional, `YYYY-MM-DD`, defaults to current date)
-- `timezone` (optional IANA timezone, e.g. `Asia/Kolkata`; defaults to UTC)
-
-Returns:
-- `success`
-- `date`
-- `summary` (`total_calories`, `total_protein_g`, `total_carbs_g`, `total_fat_g`, `meal_count`)
-- `goals`
-- `remaining`
-- `progress`
-- `meals[]` with daily meal cards (`id`, `meal_name`, `meal_type`, `eaten_at`, totals, `item_count`, optional `image_url`)
-
-## `GET /meals/{meal_id}` request
-Requires `Authorization: Bearer <supabase_access_token>`.
-
-Returns:
-- `success`
-- `meal` metadata/totals (`meal_name`, `meal_type`, `eaten_at`, `notes`, optional `image_url`)
-- `items[]` full nutrition rows for the meal
-
-## Manual test checklist
-1. Start API and verify health:
-   - `GET http://localhost:8000/health`
-2. Send multipart image request to `/analyze-image`.
-3. Confirm response includes:
-   - detected foods
-   - per-item `calories`, `protein_g`, `carbs_g`, `fat_g`
-   - `total` macros
-4. Failure-case checks:
-   - missing image (expect 400)
-   - invalid non-image file (expect 400)
-   - invalid JSON/base64 payload (expect 400/422)
-5. Optional integration checks:
-   - remove `USDA_API_KEY` and confirm endpoint still returns AI-based estimates with warnings in `notes`
-   - invalid `OPENAI_API_KEY` should return a clean OpenAI failure error
+## Troubleshooting
+- **401 on protected routes**: confirm Bearer token is present and valid.
+- **422 for `/meals`**: payload contains invalid/extra fields or invalid item values.
+- **Analyze-image fails with 503/502**: check AI env vars and outbound network access.
+- **Frequent USDA fallback notes**: verify `USDA_API_KEY` and USDA API connectivity.
+- **Summary/history empty unexpectedly**: confirm data exists for the authenticated user/date/timezone.

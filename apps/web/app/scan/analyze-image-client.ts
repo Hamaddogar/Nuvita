@@ -1,4 +1,6 @@
 import type { AnalyzeImageResponse } from "./types";
+import { mapApiError } from "@/lib/user-facing-errors";
+import { optimizeImageForUpload } from "./image-optimizer";
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 
@@ -99,8 +101,9 @@ export async function analyzeMealImage({
   portionHint,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 }: AnalyzeMealImageParams): Promise<AnalyzeImageResponse> {
+  const optimizedFile = await optimizeImageForUpload(file);
   const formData = new FormData();
-  formData.append("image", file);
+  formData.append("image", optimizedFile, optimizedFile.name);
 
   const cleanedPortionHint = portionHint?.trim();
   if (cleanedPortionHint) {
@@ -123,11 +126,11 @@ export async function analyzeMealImage({
     if (!response.ok) {
       const detail = extractErrorMessage(payload);
       if (detail) {
-        throw new Error(detail);
+        throw new Error(mapApiError(detail, "We couldn't analyze this meal. Please try another photo."));
       }
 
       if (response.status === 400 || response.status === 422) {
-        throw new Error("Image looks invalid or no food was detected. Try a clearer photo.");
+        throw new Error("We couldn't analyze this meal. Please try another clear photo.");
       }
 
       if (response.status >= 500) {
@@ -152,7 +155,7 @@ export async function analyzeMealImage({
     }
 
     if (error instanceof Error) {
-      throw error;
+      throw new Error(mapApiError(error.message, "We couldn't analyze this meal. Please try again."));
     }
 
     throw new Error("Unexpected error while analyzing your meal. Please retry.");

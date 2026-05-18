@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth-card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { mapAuthError } from "@/lib/user-facing-errors";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function SignupPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(mapAuthError(signUpError.message));
       setLoading(false);
       return;
     }
@@ -102,7 +103,7 @@ export default function SignupPage() {
       return;
     }
 
-    setError("Account created. Please confirm your email, then log in.");
+    setError("Account created. Please confirm your email, then sign in.");
     setLoading(false);
   };
 
@@ -122,6 +123,7 @@ export default function SignupPage() {
           <input
             required
             value={fullName}
+            autoComplete="name"
             onChange={(e) => setFullName(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
           />
@@ -131,6 +133,7 @@ export default function SignupPage() {
           <input
             required
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
@@ -141,6 +144,7 @@ export default function SignupPage() {
           <input
             required
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
@@ -151,6 +155,7 @@ export default function SignupPage() {
           <input
             required
             type="password"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
@@ -168,7 +173,7 @@ export default function SignupPage() {
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-foreground underline">
-          Login
+          Log in
         </Link>
       </p>
     </AuthCard>

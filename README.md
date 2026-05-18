@@ -1,54 +1,109 @@
-# AI Diet Monorepo
-Monorepo foundation for a premium AI calorie tracking app.
+# Nuvita Monorepo
+Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, FastAPI backend, and Supabase persistence.
 
-## Structure
-- `apps/web`: Next.js frontend (mobile-first, PWA-ready)
-- `apps/api`: FastAPI backend placeholders
-- `packages/shared`: Shared TypeScript types
-- `supabase`: Placeholder SQL schema + docs
-- `docs`: Architecture and planning docs
+## Monorepo structure
+- `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, insights, profile)
+- `apps/api`: FastAPI service (`/analyze-image`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`)
+- `packages/shared`: shared TypeScript domain types and goal-calculation utilities
+- `supabase`: SQL schema, RLS policies, and setup notes
+- `docs`: additional planning/architecture notes
 
-## Quick start
-1. Install root dependencies:
+## Prerequisites
+- Node.js 20+
+- npm 10+
+- Python 3.10+
+- Supabase project (URL + anon key)
+- OpenAI API key
+- USDA API key (recommended for stronger nutrition lookup enrichment)
+
+## Environment setup
+### Frontend (`apps/web/.env.local`)
+1. Copy `apps/web/.env.example` to `apps/web/.env.local`.
+2. Set:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `FASTAPI_URL` (example: `http://localhost:8000`)
+   - Optional fallback routing:
+     - `NEXT_PUBLIC_FASTAPI_URL`
+     - `FASTAPI_FALLBACK_URL`
+
+### Backend (`apps/api/.env`)
+1. Copy `apps/api/.env.example` to `apps/api/.env`.
+2. Set:
+   - `OPENAI_API_KEY`
+   - `USDA_API_KEY`
+   - `OPENAI_VISION_MODEL` (default is fine)
+   - `OPENAI_INSIGHTS_MODEL` (default is fine)
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - Optional operational key: `SUPABASE_SERVICE_ROLE_KEY`
+
+### Supabase SQL setup
+Follow `supabase/README.md` run order:
+1. `supabase/schema.sql`
+2. `supabase/rls-policies.sql`
+3. Optional seed: `supabase/seed.sql`
+
+## Run locally
+1. Install JS dependencies:
    - `npm install`
-2. Install backend dependencies:
+2. Install Python dependencies:
    - `python -m pip install -r apps/api/requirements.txt`
-3. Start frontend:
-   - `npm run dev:web`
-4. Start backend:
+3. Start API:
    - `npm run dev:api`
+4. Start web app:
+   - `npm run dev:web`
 
-## Web auth and onboarding setup
-Frontend auth requires `apps/web/.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `FASTAPI_URL`
+## Quality checks and tests
+- API import sanity: `npm run check:api`
+- Web lint: `npm run lint:web`
+- Web build: `npm run build:web`
+- Frontend tests: `npm run test:web`
+- Backend tests: `npm run test:api`
 
-The web app now includes:
-- Supabase email/password signup and login pages
-- Protected route middleware for app pages
-- Onboarding redirect logic based on `profiles.onboarding_completed`
+## Security and reliability notes
+- Protected API routes require Bearer auth and user ownership checks.
+- Supabase RLS policies enforce row ownership (`auth.uid()`-scoped access).
+- Meal create payloads and analyze-image JSON payloads reject unknown extra fields.
+- User-facing error messages are intentionally sanitized to avoid leaking internal provider/runtime details.
+- AI insights and dashboard paths include fallback behavior for degraded backend/AI conditions.
 
-## Onboarding flow
-`/onboarding` contains a 5-step flow:
-1. Personal info
-2. Activity level
-3. Goal setup
-4. Diet preference
-5. Target review
+## Production deployment checklist
+1. Apply Supabase schema + RLS SQL in the target environment.
+2. Configure all required frontend/backend environment variables.
+3. Deploy backend and verify:
+   - `GET /health` is healthy
+   - auth-required routes return 401 without token
+4. Deploy frontend and verify auth flow (signup/login/onboarding redirect).
+5. Run full quality checks:
+   - `npm run lint:web`
+   - `npm run build:web`
+   - `npm run check:api`
+   - `npm run test:web`
+   - `npm run test:api`
 
-On completion it:
-- Updates `profiles` (including `onboarding_completed = true`)
-- Inserts or updates latest `user_goals`
-- Redirects to `/dashboard`
+## Troubleshooting
+- **401 from app routes**: session expired or missing auth token; sign in again and confirm Supabase keys are correct.
+- **`/analyze-image` fails immediately**: verify API env vars and ensure uploaded file is valid image type/size.
+- **Meal save unavailable**: verify Supabase schema/RPC migration is applied and API can reach Supabase.
+- **Insights fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_INSIGHTS_MODEL`, and backend connectivity.
+- **No dashboard/history data**: confirm onboarding completed and meals were saved under same authenticated user.
 
-## Goal calculation model
-Goal calculations are implemented in `packages/shared/src/utils/goal-calculations.ts`:
-- BMR: Mifflin-St Jeor
-- TDEE: BMR × activity multiplier
-- Calorie adjustment:
-  - lose: `-500`
-  - maintain: `0`
-  - gain muscle: `+300`
-- Minimum calorie floors by sex
-- Protein/fat/carbs/fiber/sugar/sodium/water targets
+## Manual QA checklist
+1. Signup/login/logout works and protected routes redirect correctly.
+2. Onboarding completes and writes profile + latest user goals.
+3. Scan flow:
+   - image upload works
+   - analysis returns detected foods
+   - meal confirm/edit/save succeeds
+4. Dashboard:
+   - loading, empty, success, and error states render cleanly
+5. History:
+   - date navigation works
+   - empty day and populated day states render
+   - meal detail sheet opens and closes correctly
+6. Insights:
+   - loading state renders
+   - error/fallback states render friendly messaging
+   - populated coaching cards render
+7. Profile renders and logout works.

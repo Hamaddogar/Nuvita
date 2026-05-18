@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nuvita app icon">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#ECFDF5"/>
+  <path d="M256 84c-74 0-134 60-134 134 0 57 36 105 87 124v77c0 26 21 47 47 47s47-21 47-47v-77c51-19 87-67 87-124 0-74-60-134-134-134Z" fill="url(#g)"/>
+  <path d="M176 232c33 10 70 2 96-22 19-16 43-25 69-27-13-35-46-60-85-60-50 0-91 41-91 91 0 6 1 12 2 18Z" fill="#D1FAE5"/>
+  <circle cx="336" cy="290" r="24" fill="#34D399"/>
+</svg>

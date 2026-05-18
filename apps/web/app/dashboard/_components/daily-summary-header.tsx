@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, RefreshCw } from "lucide-react";
+import { NuvitaLogo } from "@/components/nuvita-logo";
 
 type DailySummaryHeaderProps = {
   fullName: string | null;
@@ -24,7 +25,10 @@ export function DailySummaryHeader({
   onRefresh,
 }: DailySummaryHeaderProps) {
   return (
-    <header className="rounded-3xl border bg-card p-5 shadow-sm">
+    <header className="rounded-3xl border border-emerald-100/80 bg-card/95 p-5 shadow-sm dark:border-slate-800">
+      <div className="mb-3">
+        <NuvitaLogo />
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Daily dashboard</p>

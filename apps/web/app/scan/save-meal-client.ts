@@ -1,4 +1,5 @@
 import type { ConfirmedMeal, ConfirmedMealItem, MacroTotals } from "./meal-confirmation-types";
+import { mapApiError } from "@/lib/user-facing-errors";
 
 export type MealSaveResponse = {
   success: boolean;
@@ -47,7 +48,7 @@ function toFriendlySaveMessage(detail: string): string {
     normalized.includes("create_meal_with_items")
     || (normalized.includes("schema cache") && normalized.includes("function"))
   ) {
-    return "Meal save setup is incomplete on the database. Run the Step 4 Supabase SQL migration, then retry.";
+    return "Meal saving is temporarily unavailable. Please try again shortly.";
   }
   return detail;
 }
@@ -75,12 +76,19 @@ function isMealSaveResponse(payload: unknown): payload is MealSaveResponse {
 }
 
 export async function saveMeal(payload: ConfirmedMeal): Promise<MealSaveResponse> {
+  const payloadForApi = {
+    meal_name: payload.meal_name,
+    meal_type: payload.meal_type,
+    eaten_at: payload.eaten_at,
+    notes: payload.notes,
+    items: payload.items,
+  };
   const response = await fetch("/api/meals", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payloadForApi),
     cache: "no-store",
   });
 
@@ -90,7 +98,9 @@ export async function saveMeal(payload: ConfirmedMeal): Promise<MealSaveResponse
   if (!response.ok) {
     const detail = extractErrorMessage(parsed);
     if (detail) {
-      throw new Error(toFriendlySaveMessage(detail));
+      throw new Error(
+        mapApiError(toFriendlySaveMessage(detail), "Something went wrong while saving your meal.")
+      );
     }
 
     if (response.status === 401) {
@@ -100,7 +110,7 @@ export async function saveMeal(payload: ConfirmedMeal): Promise<MealSaveResponse
       throw new Error("Meal data is invalid. Please review your edits and try again.");
     }
     if (response.status >= 500) {
-      throw new Error("Meal service is unavailable right now. Please try again.");
+      throw new Error("Something went wrong while saving your meal. Please try again.");
     }
     throw new Error("Failed to save meal. Please retry.");
   }
