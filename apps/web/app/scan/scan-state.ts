@@ -58,6 +58,14 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
         result: action.result,
         error: null,
       };
+    case "LOAD_RESULT":
+      return {
+        ...state,
+        status: "confirming",
+        selectedFile: null,
+        result: action.result,
+        error: null,
+      };
     case "MEAL_CONFIRMED":
       return {
         ...state,
@@ -83,6 +91,10 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
         ...state,
         status: getReadyStatus(state.selectedFile),
         error: null,
+      };
+    case "RESET_FLOW":
+      return {
+        ...initialScanState,
       };
     default:
       return state;

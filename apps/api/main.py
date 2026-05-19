@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from routes.foods import router as foods_router
 from routes.insights import router as insights_router
 from routes.meals import router as meals_router
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -23,6 +24,7 @@ load_dotenv()
 app = FastAPI(title="AI Diet API", version="0.2.0")
 app.include_router(meals_router)
 app.include_router(insights_router)
+app.include_router(foods_router)
 
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024

@@ -3,7 +3,7 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
 
 ## Monorepo structure
 - `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, insights, profile)
-- `apps/api`: FastAPI service (`/analyze-image`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`)
+- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`)
 - `packages/shared`: shared TypeScript domain types and goal-calculation utilities
 - `supabase`: SQL schema, RLS policies, and setup notes
 - `docs`: additional planning/architecture notes
@@ -15,6 +15,7 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
 - Supabase project (URL + anon key)
 - OpenAI API key
 - USDA API key (recommended for stronger nutrition lookup enrichment)
+- OpenFoodFacts user agent string (recommended for barcode lookup requests)
 
 ## Environment setup
 ### Frontend (`apps/web/.env.local`)
@@ -32,6 +33,8 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
 2. Set:
    - `OPENAI_API_KEY`
    - `USDA_API_KEY`
+   - `OPENFOODFACTS_USER_AGENT` (recommended, identifies your app to OpenFoodFacts)
+   - Optional barcode lookup base URL override: `OPENFOODFACTS_BASE_URL`
    - `OPENAI_VISION_MODEL` (default is fine)
    - `OPENAI_INSIGHTS_MODEL` (default is fine)
    - `SUPABASE_URL`
@@ -85,6 +88,7 @@ Follow `supabase/README.md` run order:
 ## Troubleshooting
 - **401 from app routes**: session expired or missing auth token; sign in again and confirm Supabase keys are correct.
 - **`/analyze-image` fails immediately**: verify API env vars and ensure uploaded file is valid image type/size.
+- **Barcode lookup not finding products**: verify connectivity to OpenFoodFacts and set a valid `OPENFOODFACTS_USER_AGENT`.
 - **Meal save unavailable**: verify Supabase schema/RPC migration is applied and API can reach Supabase.
 - **Insights fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_INSIGHTS_MODEL`, and backend connectivity.
 - **No dashboard/history data**: confirm onboarding completed and meals were saved under same authenticated user.
@@ -95,6 +99,9 @@ Follow `supabase/README.md` run order:
 3. Scan flow:
    - image upload works
    - analysis returns detected foods
+   - barcode scan/manual barcode lookup resolves product with nutrition
+   - manual food search shows live results and quick-add works
+   - favorites and recents quick-add paths work
    - meal confirm/edit/save succeeds
 4. Dashboard:
    - loading, empty, success, and error states render cleanly

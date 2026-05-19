@@ -59,4 +59,30 @@ describe("scanReducer", () => {
     expect(cleared.status).toBe("image_selected");
     expect(cleared.error).toBeNull();
   });
+
+  it("loads a non-photo result directly into confirmation state", () => {
+    const loaded = scanReducer(initialScanState, {
+      type: "LOAD_RESULT",
+      result: MOCK_ANALYSIS,
+    });
+
+    expect(loaded.status).toBe("confirming");
+    expect(loaded.selectedFile).toBeNull();
+    expect(loaded.result).toEqual(MOCK_ANALYSIS);
+  });
+
+  it("fully resets flow state when reset action is dispatched", () => {
+    const file = new File(["image"], "meal.jpg", { type: "image/jpeg" });
+    const dirtyState = {
+      ...initialScanState,
+      status: "confirming" as const,
+      selectedFile: file,
+      portionHint: "half plate",
+      result: MOCK_ANALYSIS,
+      error: "Oops",
+    };
+
+    const reset = scanReducer(dirtyState, { type: "RESET_FLOW" });
+    expect(reset).toEqual(initialScanState);
+  });
 });

@@ -61,6 +61,10 @@ export type ScanAction =
       result: AnalyzeImageResponse;
     }
   | {
+      type: "LOAD_RESULT";
+      result: AnalyzeImageResponse;
+    }
+  | {
       type: "MEAL_CONFIRMED";
     }
   | {
@@ -73,4 +77,7 @@ export type ScanAction =
     }
   | {
       type: "CLEAR_ERROR";
+    }
+  | {
+      type: "RESET_FLOW";
     };
