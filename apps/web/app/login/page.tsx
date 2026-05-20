@@ -109,22 +109,6 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <div className="space-y-2">
-        <button
-          type="button"
-          disabled
-          className="w-full rounded-2xl border px-4 py-3 text-sm font-medium text-muted-foreground"
-        >
-          Continue with Google (coming soon)
-        </button>
-        <button
-          type="button"
-          disabled
-          className="w-full rounded-2xl border px-4 py-3 text-sm font-medium text-muted-foreground"
-        >
-          Continue with Apple (coming soon)
-        </button>
-      </div>
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/signup" className="font-medium text-foreground underline">

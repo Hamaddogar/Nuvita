@@ -526,3 +526,291 @@ def test_food_favorite_endpoint_saves_food(
 
     assert response.status_code == 200
     assert response.json()["favorite_id"] == "fav-1"
+
+
+WATER_TODAY_PAYLOAD = {
+    "success": True,
+    "date": "2026-05-19",
+    "today_total_ml": 1750,
+    "goal_ml": 2500,
+    "remaining_ml": 750,
+    "progress_percent": 70,
+    "logs": [
+        {
+            "id": "water-1",
+            "amount_ml": 500,
+            "logged_at": "2026-05-19T08:00:00Z",
+            "created_at": "2026-05-19T08:00:05Z",
+        }
+    ],
+}
+
+WATER_HISTORY_PAYLOAD = {
+    "success": True,
+    "entries": [
+        {
+            "date": "2026-05-18",
+            "total_ml": 2100,
+            "goal_ml": 2500,
+            "progress_percent": 84,
+        },
+        {
+            "date": "2026-05-19",
+            "total_ml": 1750,
+            "goal_ml": 2500,
+            "progress_percent": 70,
+        },
+    ],
+    "logs": WATER_TODAY_PAYLOAD["logs"],
+}
+
+WATER_MUTATION_PAYLOAD = {
+    "success": True,
+    "log": WATER_TODAY_PAYLOAD["logs"][0],
+    "today_total_ml": 1750,
+    "goal_ml": 2500,
+    "remaining_ml": 750,
+    "progress_percent": 70,
+}
+
+WEIGHT_SUMMARY_PAYLOAD = {
+    "success": True,
+    "current_weight": 78.4,
+    "target_weight": 72.0,
+    "unit": "kg",
+    "change_from_start": -3.6,
+    "remaining_to_goal": 6.4,
+    "recent_change": -0.4,
+    "progress_percent": 36,
+    "trend": [
+        {"date": "2026-05-12", "weight": 82.0, "unit": "kg"},
+        {"date": "2026-05-19", "weight": 78.4, "unit": "kg"},
+    ],
+}
+
+WEIGHT_HISTORY_PAYLOAD = {
+    "success": True,
+    "logs": [
+        {
+            "id": "weight-1",
+            "weight": 78.4,
+            "unit": "kg",
+            "weight_kg": 78.4,
+            "notes": "Morning fasted",
+            "logged_at": "2026-05-19T06:00:00Z",
+            "created_at": "2026-05-19T06:00:05Z",
+        }
+    ],
+    "trend": WEIGHT_SUMMARY_PAYLOAD["trend"],
+}
+
+WEIGHT_MUTATION_PAYLOAD = {
+    "success": True,
+    "log": WEIGHT_HISTORY_PAYLOAD["logs"][0],
+    "summary": WEIGHT_SUMMARY_PAYLOAD,
+}
+
+WEIGHT_GOAL_PAYLOAD = {
+    "success": True,
+    "target_weight": 72.0,
+    "unit": "kg",
+}
+
+
+def test_water_today_endpoint_requires_authentication(client: TestClient) -> None:
+    response = client.get("/water-logs/today")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required. Please sign in again."
+
+
+def test_water_endpoints_return_service_payloads(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import routes.wellness as wellness_routes
+
+    monkeypatch.setattr(wellness_routes, "extract_bearer_token", lambda _authorization: "token")
+
+    async def fake_authenticate_user(_access_token: str) -> dict[str, str]:
+        return {"id": "user-1"}
+
+    async def fake_fetch_water_today(
+        _access_token: str,
+        *,
+        user_id: str,
+        date: str | None,
+        timezone_name: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert date == "2026-05-19"
+        assert timezone_name == "UTC"
+        return WATER_TODAY_PAYLOAD
+
+    async def fake_fetch_water_history(
+        _access_token: str,
+        *,
+        user_id: str,
+        days: int,
+        timezone_name: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert days == 14
+        assert timezone_name == "UTC"
+        return WATER_HISTORY_PAYLOAD
+
+    async def fake_create_water_log(
+        _access_token: str,
+        *,
+        user_id: str,
+        amount_ml: int,
+        logged_at,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert amount_ml == 500
+        assert logged_at is None
+        return WATER_MUTATION_PAYLOAD
+
+    async def fake_update_water_goal(
+        _access_token: str,
+        *,
+        user_id: str,
+        target_ml: int,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert target_ml == 2800
+        return {"success": True, "goal_ml": 2800}
+
+    monkeypatch.setattr(wellness_routes, "authenticate_user", fake_authenticate_user)
+    monkeypatch.setattr(wellness_routes, "fetch_water_today", fake_fetch_water_today)
+    monkeypatch.setattr(wellness_routes, "fetch_water_history", fake_fetch_water_history)
+    monkeypatch.setattr(wellness_routes, "create_water_log", fake_create_water_log)
+    monkeypatch.setattr(wellness_routes, "update_water_goal", fake_update_water_goal)
+
+    today_response = client.get(
+        "/water-logs/today?date=2026-05-19&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+    history_response = client.get(
+        "/water-logs/history?days=14&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+    create_response = client.post(
+        "/water-logs",
+        headers={"Authorization": "Bearer token"},
+        json={"amount_ml": 500},
+    )
+    goal_response = client.put(
+        "/water-logs/goal",
+        headers={"Authorization": "Bearer token"},
+        json={"target_ml": 2800},
+    )
+
+    assert today_response.status_code == 200
+    assert history_response.status_code == 200
+    assert create_response.status_code == 200
+    assert goal_response.status_code == 200
+    assert today_response.json()["today_total_ml"] == 1750
+    assert history_response.json()["entries"][0]["progress_percent"] == 84
+    assert create_response.json()["log"]["id"] == "water-1"
+    assert goal_response.json()["goal_ml"] == 2800
+
+
+def test_weight_endpoints_return_service_payloads(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import routes.wellness as wellness_routes
+
+    monkeypatch.setattr(wellness_routes, "extract_bearer_token", lambda _authorization: "token")
+
+    async def fake_authenticate_user(_access_token: str) -> dict[str, str]:
+        return {"id": "user-1"}
+
+    async def fake_fetch_weight_summary(
+        _access_token: str,
+        *,
+        user_id: str,
+        timezone_name: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert timezone_name == "UTC"
+        assert unit == "kg"
+        return WEIGHT_SUMMARY_PAYLOAD
+
+    async def fake_fetch_weight_history(
+        _access_token: str,
+        *,
+        user_id: str,
+        days: int,
+        timezone_name: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert days == 90
+        assert timezone_name == "UTC"
+        assert unit == "kg"
+        return WEIGHT_HISTORY_PAYLOAD
+
+    async def fake_create_weight_log(
+        _access_token: str,
+        *,
+        user_id: str,
+        weight: float,
+        unit: str | None,
+        notes: str | None,
+        logged_at,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert weight == 78.4
+        assert unit == "kg"
+        assert notes == "Morning fasted"
+        assert logged_at is None
+        return WEIGHT_MUTATION_PAYLOAD
+
+    async def fake_update_weight_goal(
+        _access_token: str,
+        *,
+        user_id: str,
+        target_weight: float,
+        unit: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert target_weight == 72.0
+        assert unit == "kg"
+        return WEIGHT_GOAL_PAYLOAD
+
+    monkeypatch.setattr(wellness_routes, "authenticate_user", fake_authenticate_user)
+    monkeypatch.setattr(wellness_routes, "fetch_weight_summary", fake_fetch_weight_summary)
+    monkeypatch.setattr(wellness_routes, "fetch_weight_history", fake_fetch_weight_history)
+    monkeypatch.setattr(wellness_routes, "create_weight_log", fake_create_weight_log)
+    monkeypatch.setattr(wellness_routes, "update_weight_goal", fake_update_weight_goal)
+
+    summary_response = client.get(
+        "/weight-summary?timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+    history_response = client.get(
+        "/weight-logs/history?days=90&timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+    create_response = client.post(
+        "/weight-logs",
+        headers={"Authorization": "Bearer token"},
+        json={"weight": 78.4, "unit": "kg", "notes": "Morning fasted"},
+    )
+    goal_response = client.put(
+        "/weight-logs/goal",
+        headers={"Authorization": "Bearer token"},
+        json={"target_weight": 72, "unit": "kg"},
+    )
+
+    assert summary_response.status_code == 200
+    assert history_response.status_code == 200
+    assert create_response.status_code == 200
+    assert goal_response.status_code == 200
+    assert summary_response.json()["remaining_to_goal"] == 6.4
+    assert history_response.json()["logs"][0]["id"] == "weight-1"
+    assert create_response.json()["summary"]["current_weight"] == 78.4
+    assert goal_response.json()["target_weight"] == 72.0

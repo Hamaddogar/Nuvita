@@ -3,7 +3,7 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
 
 ## Monorepo structure
 - `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, insights, profile)
-- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`)
+- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`, `/water-logs/*`, `/weight-logs/*`, `/weight-summary`)
 - `packages/shared`: shared TypeScript domain types and goal-calculation utilities
 - `supabase`: SQL schema, RLS policies, and setup notes
 - `docs`: additional planning/architecture notes
@@ -92,6 +92,7 @@ Follow `supabase/README.md` run order:
 - **Meal save unavailable**: verify Supabase schema/RPC migration is applied and API can reach Supabase.
 - **Insights fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_INSIGHTS_MODEL`, and backend connectivity.
 - **No dashboard/history data**: confirm onboarding completed and meals were saved under same authenticated user.
+- **Hydration or weight modules fail**: verify the authenticated user has access to `water_logs`, `weight_logs`, and `user_goals` tables with current Supabase schema + RLS.
 
 ## Manual QA checklist
 1. Signup/login/logout works and protected routes redirect correctly.
@@ -105,6 +106,10 @@ Follow `supabase/README.md` run order:
    - meal confirm/edit/save succeeds
 4. Dashboard:
    - loading, empty, success, and error states render cleanly
+   - hydration card supports quick-add, custom add, edit/delete water log, and goal update
+   - hydration trend chart updates after water log changes
+   - weight card supports unit toggle (kg/lb), weight log save, goal update, and recent log rendering
+   - weight trend chart renders and reflects selected unit
 5. History:
    - date navigation works
    - empty day and populated day states render

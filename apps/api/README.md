@@ -33,6 +33,16 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
 - `GET /meals/{meal_id}`: authenticated meal detail
 - `GET /ai-insights/today`: authenticated daily coaching cards
 - `GET /ai-insights/weekly`: authenticated weekly coaching summary
+- `GET /water-logs/today`: authenticated daily hydration summary and logs
+- `GET /water-logs/history`: authenticated hydration trend data
+- `POST /water-logs`: authenticated hydration log create
+- `PATCH /water-logs/{log_id}`: authenticated hydration log update
+- `DELETE /water-logs/{log_id}`: authenticated hydration log delete
+- `PUT /water-logs/goal`: authenticated hydration goal update
+- `POST /weight-logs`: authenticated weight log create
+- `GET /weight-logs/history`: authenticated weight history + trend
+- `GET /weight-summary`: authenticated weight summary metrics
+- `PUT /weight-logs/goal`: authenticated weight goal update
 
 ## Input/output behavior highlights
 - Analyze endpoint accepts:
