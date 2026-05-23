@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Camera, Compass, History, UserRound } from "lucide-react";
+import { BarChart3, Camera, Compass, History, LineChart, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Today", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/scan", label: "Scan", icon: Camera },
+  { href: "/analytics", label: "Trends", icon: LineChart },
   { href: "/insights", label: "Coach", icon: Compass },
   { href: "/profile", label: "Profile", icon: UserRound },
 ] as const;
@@ -22,7 +23,7 @@ export function MobileBottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-emerald-100/80 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-      <ul className="grid grid-cols-5 gap-1">
+      <ul className="grid grid-cols-6 gap-1">
         {navItems.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;

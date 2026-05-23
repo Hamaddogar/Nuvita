@@ -2,8 +2,8 @@
 Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, FastAPI backend, and Supabase persistence.
 
 ## Monorepo structure
-- `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, insights, profile)
-- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`, `/water-logs/*`, `/weight-logs/*`, `/weight-summary`)
+- `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, analytics, insights, profile)
+- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`, `/analytics/*`, `/water-logs/*`, `/weight-logs/*`, `/weight-summary`)
 - `packages/shared`: shared TypeScript domain types and goal-calculation utilities
 - `supabase`: SQL schema, RLS policies, and setup notes
 - `docs`: additional planning/architecture notes
@@ -37,6 +37,7 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
    - Optional barcode lookup base URL override: `OPENFOODFACTS_BASE_URL`
    - `OPENAI_VISION_MODEL` (default is fine)
    - `OPENAI_INSIGHTS_MODEL` (default is fine)
+   - `OPENAI_ANALYTICS_MODEL` (optional override for analytics smart-summary generation)
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - Optional operational key: `SUPABASE_SERVICE_ROLE_KEY`
@@ -69,7 +70,7 @@ Follow `supabase/README.md` run order:
 - Supabase RLS policies enforce row ownership (`auth.uid()`-scoped access).
 - Meal create payloads and analyze-image JSON payloads reject unknown extra fields.
 - User-facing error messages are intentionally sanitized to avoid leaking internal provider/runtime details.
-- AI insights and dashboard paths include fallback behavior for degraded backend/AI conditions.
+- AI insights and analytics smart summaries include resilient fallback behavior for degraded backend/AI conditions.
 
 ## Production deployment checklist
 1. Apply Supabase schema + RLS SQL in the target environment.
@@ -91,6 +92,7 @@ Follow `supabase/README.md` run order:
 - **Barcode lookup not finding products**: verify connectivity to OpenFoodFacts and set a valid `OPENFOODFACTS_USER_AGENT`.
 - **Meal save unavailable**: verify Supabase schema/RPC migration is applied and API can reach Supabase.
 - **Insights fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_INSIGHTS_MODEL`, and backend connectivity.
+- **Analytics summary fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_ANALYTICS_MODEL`, and backend connectivity.
 - **No dashboard/history data**: confirm onboarding completed and meals were saved under same authenticated user.
 - **Hydration or weight modules fail**: verify the authenticated user has access to `water_logs`, `weight_logs`, and `user_goals` tables with current Supabase schema + RLS.
 
@@ -118,4 +120,9 @@ Follow `supabase/README.md` run order:
    - loading state renders
    - error/fallback states render friendly messaging
    - populated coaching cards render
-7. Profile renders and logout works.
+7. Analytics:
+   - weekly adherence cards and trend charts render
+   - monthly hydration/weight trend chart renders and unit toggle works
+   - streak and achievement sections render
+   - smart summary renders and shows fallback messaging when AI path is degraded
+8. Profile renders and logout works.

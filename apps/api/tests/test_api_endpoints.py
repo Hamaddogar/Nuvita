@@ -814,3 +814,278 @@ def test_weight_endpoints_return_service_payloads(
     assert history_response.json()["logs"][0]["id"] == "weight-1"
     assert create_response.json()["summary"]["current_weight"] == 78.4
     assert goal_response.json()["target_weight"] == 72.0
+
+
+ANALYTICS_WEEKLY_PAYLOAD = {
+    "success": True,
+    "timezone": "UTC",
+    "summary": {
+        "week_start": "2026-05-13",
+        "week_end": "2026-05-19",
+        "days_tracked": 6,
+        "calorie_trend": "up",
+        "weight_trend": "down",
+        "protein_consistency_score": 82,
+        "hydration_consistency_score": 77,
+        "goal_adherence": {
+            "calories_percent": 79,
+            "protein_percent": 81,
+            "carbs_percent": 75,
+            "fat_percent": 78,
+            "hydration_percent": 72,
+            "overall_percent": 77,
+        },
+        "weekly_macro_averages": [
+            {"macro": "calories", "average": 2080, "goal": 2200, "adherence_percent": 95},
+            {"macro": "protein_g", "average": 152, "goal": 160, "adherence_percent": 95},
+            {"macro": "carbs_g", "average": 208, "goal": 220, "adherence_percent": 95},
+            {"macro": "fat_g", "average": 68, "goal": 70, "adherence_percent": 97},
+            {"macro": "hydration_ml", "average": 2320, "goal": 2500, "adherence_percent": 93},
+        ],
+        "weight_change": -0.7,
+        "weight_goal_progress_percent": 42,
+    },
+    "daily_metrics": [
+        {
+            "date": "2026-05-19",
+            "calories": 2140,
+            "protein_g": 155,
+            "carbs_g": 210,
+            "fat_g": 70,
+            "hydration_ml": 2400,
+            "hydration_goal_ml": 2500,
+            "calorie_adherence_percent": 97,
+            "protein_adherence_percent": 97,
+            "carbs_adherence_percent": 95,
+            "fat_adherence_percent": 100,
+            "hydration_adherence_percent": 96,
+            "weight": 78.4,
+            "weight_unit": "kg",
+            "meal_count": 4,
+            "tracked": True,
+        }
+    ],
+}
+
+ANALYTICS_MONTHLY_PAYLOAD = {
+    "success": True,
+    "timezone": "UTC",
+    "summary": {
+        "period_start": "2026-04-20",
+        "period_end": "2026-05-19",
+        "days_tracked": 24,
+        "average_goal_adherence_percent": 74,
+        "calories_trend": "stable",
+        "protein_trend": "up",
+        "hydration_trend": "up",
+        "weight_trend": "down",
+    },
+    "daily_metrics": ANALYTICS_WEEKLY_PAYLOAD["daily_metrics"],
+    "weekly_metrics": [
+        {
+            "week_start": "2026-05-13",
+            "week_end": "2026-05-19",
+            "avg_calories": 2080,
+            "avg_protein_g": 152,
+            "avg_hydration_ml": 2320,
+            "goal_adherence_percent": 77,
+            "weight_change": -0.7,
+        }
+    ],
+}
+
+ANALYTICS_STREAKS_PAYLOAD = {
+    "success": True,
+    "as_of_date": "2026-05-19",
+    "streaks": [
+        {
+            "key": "meal_logging",
+            "label": "Meal logging streak",
+            "current": 6,
+            "best": 11,
+            "unit": "days",
+            "is_active": True,
+        },
+        {
+            "key": "hydration_goal",
+            "label": "Hydration goal streak",
+            "current": 3,
+            "best": 7,
+            "unit": "days",
+            "is_active": True,
+        },
+    ],
+}
+
+ANALYTICS_ACHIEVEMENTS_PAYLOAD = {
+    "success": True,
+    "generated_at": "2026-05-19T12:00:00Z",
+    "total_unlocked": 2,
+    "achievements": [
+        {
+            "id": "meal_streak_7",
+            "title": "7-day logging streak",
+            "description": "Log at least one meal for 7 days in a row.",
+            "category": "consistency",
+            "current_value": 6,
+            "target_value": 7,
+            "progress_percent": 86,
+            "unlocked": False,
+            "unlocked_at": None,
+        }
+    ],
+}
+
+ANALYTICS_SUMMARY_PAYLOAD = {
+    "success": True,
+    "source": "fallback",
+    "timezone": "UTC",
+    "period_start": "2026-04-20",
+    "period_end": "2026-05-19",
+    "generated_at": "2026-05-19T12:00:00Z",
+    "key_metrics": {
+        "days_tracked": 24,
+        "average_goal_adherence_percent": 74,
+        "logging_streak_days": 6,
+        "hydration_streak_days": 3,
+        "protein_streak_days": 4,
+        "weight_goal_progress_percent": 42,
+    },
+    "streak_highlights": ANALYTICS_STREAKS_PAYLOAD["streaks"],
+    "summary": {
+        "headline": "Your consistency trend is improving and your adherence is becoming more stable.",
+        "wins": ["Meal logging consistency is improving this week."],
+        "focus_areas": ["Keep hydration timing evenly distributed."],
+        "next_steps": ["Repeat your highest-protein breakfast template tomorrow."],
+        "motivation": "Small, repeatable behaviors are compounding into long-term progress.",
+        "risk_flags": [],
+        "confidence_score": 74,
+    },
+    "fallback_reason": "Analytics AI summary timed out.",
+}
+
+
+def test_analytics_endpoint_requires_authentication(client: TestClient) -> None:
+    response = client.get("/analytics/weekly")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required. Please sign in again."
+
+
+def test_analytics_endpoints_return_service_payloads(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import routes.analytics as analytics_routes
+
+    monkeypatch.setattr(analytics_routes, "extract_bearer_token", lambda _authorization: "token")
+
+    async def fake_authenticate_user(_access_token: str) -> dict[str, str]:
+        return {"id": "user-1"}
+
+    async def fake_fetch_analytics_weekly(
+        _access_token: str,
+        *,
+        requested_date: str | None,
+        timezone_name: str | None,
+        user_id: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        assert user_id == "user-1"
+        assert unit == "kg"
+        return ANALYTICS_WEEKLY_PAYLOAD
+
+    async def fake_fetch_analytics_monthly(
+        _access_token: str,
+        *,
+        requested_date: str | None,
+        timezone_name: str | None,
+        user_id: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        assert user_id == "user-1"
+        assert unit == "kg"
+        return ANALYTICS_MONTHLY_PAYLOAD
+
+    async def fake_fetch_analytics_streaks(
+        _access_token: str,
+        *,
+        requested_date: str | None,
+        timezone_name: str | None,
+        user_id: str | None,
+    ) -> dict:
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        assert user_id == "user-1"
+        return ANALYTICS_STREAKS_PAYLOAD
+
+    async def fake_fetch_analytics_achievements(
+        _access_token: str,
+        *,
+        requested_date: str | None,
+        timezone_name: str | None,
+        user_id: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        assert user_id == "user-1"
+        assert unit == "kg"
+        return ANALYTICS_ACHIEVEMENTS_PAYLOAD
+
+    async def fake_fetch_analytics_summary(
+        _access_token: str,
+        *,
+        requested_date: str | None,
+        timezone_name: str | None,
+        user_id: str | None,
+        unit: str | None,
+    ) -> dict:
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        assert user_id == "user-1"
+        assert unit == "kg"
+        return ANALYTICS_SUMMARY_PAYLOAD
+
+    monkeypatch.setattr(analytics_routes, "authenticate_user", fake_authenticate_user)
+    monkeypatch.setattr(analytics_routes, "fetch_analytics_weekly", fake_fetch_analytics_weekly)
+    monkeypatch.setattr(analytics_routes, "fetch_analytics_monthly", fake_fetch_analytics_monthly)
+    monkeypatch.setattr(analytics_routes, "fetch_analytics_streaks", fake_fetch_analytics_streaks)
+    monkeypatch.setattr(analytics_routes, "fetch_analytics_achievements", fake_fetch_analytics_achievements)
+    monkeypatch.setattr(analytics_routes, "fetch_analytics_summary", fake_fetch_analytics_summary)
+
+    weekly_response = client.get(
+        "/analytics/weekly?date=2026-05-19&timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+    monthly_response = client.get(
+        "/analytics/monthly?date=2026-05-19&timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+    streaks_response = client.get(
+        "/analytics/streaks?date=2026-05-19&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+    achievements_response = client.get(
+        "/analytics/achievements?date=2026-05-19&timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+    summary_response = client.get(
+        "/analytics/summary?date=2026-05-19&timezone=UTC&unit=kg",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert weekly_response.status_code == 200
+    assert monthly_response.status_code == 200
+    assert streaks_response.status_code == 200
+    assert achievements_response.status_code == 200
+    assert summary_response.status_code == 200
+    assert weekly_response.json()["summary"]["days_tracked"] == 6
+    assert monthly_response.json()["summary"]["average_goal_adherence_percent"] == 74
+    assert streaks_response.json()["streaks"][0]["current"] == 6
+    assert achievements_response.json()["total_unlocked"] == 2
+    assert summary_response.json()["source"] == "fallback"

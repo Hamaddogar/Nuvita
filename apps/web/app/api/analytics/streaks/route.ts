@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  fetchAnalyticsWithFailover,
+  parseDateInput,
+  parseTimezoneInput,
+  tryParseJson,
+} from "../_shared";
+
+export async function GET(request: Request) {
+  const supabase = createSupabaseServerClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    return NextResponse.json({ detail: "Authentication required. Please sign in again." }, { status: 401 });
+  }
+
+  const incomingUrl = new URL(request.url);
+  let timezone: string;
+  let date: string;
+  try {
+    timezone = parseTimezoneInput(incomingUrl.searchParams.get("timezone"));
+    date = parseDateInput(incomingUrl.searchParams.get("date"), timezone);
+  } catch (error) {
+    return NextResponse.json(
+      { detail: error instanceof Error ? error.message : "Invalid analytics request query." },
+      { status: 422 }
+    );
+  }
+
+  const suffix = `?${new URLSearchParams({ date, timezone }).toString()}`;
+  const { upstreamResponse, sawBackend404 } = await fetchAnalyticsWithFailover({
+    accessToken: session.access_token,
+    endpointPath: "/analytics/streaks",
+    suffix,
+  });
+
+  if (!upstreamResponse) {
+    return NextResponse.json(
+      {
+        detail: sawBackend404
+          ? "Streak analytics endpoint is updating. Please try again shortly."
+          : "Unable to load streak analytics right now. Please try again shortly.",
+      },
+      { status: sawBackend404 ? 503 : 502 }
+    );
+  }
+
+  const responseBody = tryParseJson(await upstreamResponse.text());
+  return NextResponse.json(responseBody, { status: upstreamResponse.status });
+}

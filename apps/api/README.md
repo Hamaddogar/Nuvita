@@ -1,5 +1,5 @@
 # Nuvita FastAPI Service
-FastAPI backend for image-based meal analysis, Supabase-backed meal logging, dashboard/history summaries, and AI coaching insights.
+FastAPI backend for image-based meal analysis, Supabase-backed meal logging, dashboard/history summaries, advanced analytics trends, and AI coaching insights.
 
 ## Setup
 1. Create and activate a Python virtual environment.
@@ -14,6 +14,7 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
    - Optional:
      - `OPENAI_VISION_MODEL`
      - `OPENAI_INSIGHTS_MODEL`
+     - `OPENAI_ANALYTICS_MODEL`
      - `OPENFOODFACTS_BASE_URL`
      - `SUPABASE_SERVICE_ROLE_KEY`
 4. Run the API:
@@ -33,6 +34,11 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
 - `GET /meals/{meal_id}`: authenticated meal detail
 - `GET /ai-insights/today`: authenticated daily coaching cards
 - `GET /ai-insights/weekly`: authenticated weekly coaching summary
+- `GET /analytics/weekly`: authenticated 7-day adherence + macro trend metrics
+- `GET /analytics/monthly`: authenticated 30-day trend and weekly rollup analytics
+- `GET /analytics/streaks`: authenticated current/best consistency streak metrics
+- `GET /analytics/achievements`: authenticated achievement progression and unlock status
+- `GET /analytics/summary`: authenticated AI smart-progress narrative with fallback support
 - `GET /water-logs/today`: authenticated daily hydration summary and logs
 - `GET /water-logs/history`: authenticated hydration trend data
 - `POST /water-logs`: authenticated hydration log create
@@ -53,6 +59,7 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
 - Protected endpoints require `Authorization: Bearer <supabase_access_token>`.
 - User-facing errors are sanitized (internal provider/runtime details are not surfaced directly).
 - Food search requires `USDA_API_KEY`; barcode lookup uses OpenFoodFacts and supports `OPENFOODFACTS_USER_AGENT` override.
+- Analytics summary generation uses OpenAI with strict JSON-schema validation and a sanitized deterministic fallback when AI is unavailable.
 
 ## Example requests
 Multipart analyze request:
@@ -84,3 +91,4 @@ curl -X POST "http://localhost:8000/analyze-image" \
 - **Frequent USDA fallback notes**: verify `USDA_API_KEY` and USDA API connectivity.
 - **Barcode lookup failures**: verify outbound access to OpenFoodFacts and a valid `OPENFOODFACTS_USER_AGENT` value.
 - **Summary/history empty unexpectedly**: confirm data exists for the authenticated user/date/timezone.
+- **Frequent analytics summary fallback**: verify `OPENAI_API_KEY`, optional `OPENAI_ANALYTICS_MODEL`, and outbound access to OpenAI.

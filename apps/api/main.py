@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from routes.analytics import router as analytics_router
 from routes.foods import router as foods_router
 from routes.insights import router as insights_router
 from routes.meals import router as meals_router
@@ -27,6 +28,7 @@ app.include_router(meals_router)
 app.include_router(insights_router)
 app.include_router(foods_router)
 app.include_router(wellness_router)
+app.include_router(analytics_router)
 
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024
