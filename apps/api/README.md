@@ -1,5 +1,5 @@
 # Nuvita FastAPI Service
-FastAPI backend for image-based meal analysis, Supabase-backed meal logging, dashboard/history summaries, advanced analytics trends, and AI coaching insights.
+FastAPI backend for image-based meal analysis, Supabase-backed meal logging, dashboard/history summaries, advanced analytics trends, AI coaching insights, and wearable health integrations.
 
 ## Setup
 1. Create and activate a Python virtual environment.
@@ -11,12 +11,17 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
    - `OPENFOODFACTS_USER_AGENT` (recommended for barcode lookups)
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - `FITBIT_CLIENT_ID` (required for Fitbit web OAuth)
+   - `FITBIT_CLIENT_SECRET` (required for Fitbit web OAuth)
+   - `FITBIT_REDIRECT_URI` (must match Fitbit app config, e.g. `http://localhost:3000/api/integrations/fitbit/callback`)
+   - `HEALTH_TOKEN_ENCRYPTION_KEY` (16+ chars; used for encrypted integration token storage)
    - Optional:
      - `OPENAI_VISION_MODEL`
      - `OPENAI_INSIGHTS_MODEL`
      - `OPENAI_ANALYTICS_MODEL`
      - `OPENFOODFACTS_BASE_URL`
      - `SUPABASE_SERVICE_ROLE_KEY`
+     - `SUPABASE_ENCRYPTION_KEY` (legacy alias fallback for `HEALTH_TOKEN_ENCRYPTION_KEY`)
 4. Run the API:
    - `python -m uvicorn main:app --reload`
 
@@ -49,6 +54,14 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
 - `GET /weight-logs/history`: authenticated weight history + trend
 - `GET /weight-summary`: authenticated weight summary metrics
 - `PUT /weight-logs/goal`: authenticated weight goal update
+- `GET /integrations`: authenticated list of provider states
+- `POST /integrations/{provider}/connect`: start provider connect flow (Fitbit OAuth on web)
+- `GET /integrations/{provider}/callback`: complete provider OAuth callback
+- `POST /integrations/{provider}/sync`: fetch and normalize provider data
+- `POST /integrations/{provider}/disconnect`: revoke/disconnect provider
+- `GET /health-data/summary`: compact synced health snapshot for dashboard/coaching context
+- `GET /health-data/activity`: normalized activity timeline
+- `GET /health-data/body`: normalized body-metric timeline
 
 ## Input/output behavior highlights
 - Analyze endpoint accepts:
@@ -60,6 +73,7 @@ FastAPI backend for image-based meal analysis, Supabase-backed meal logging, das
 - User-facing errors are sanitized (internal provider/runtime details are not surfaced directly).
 - Food search requires `USDA_API_KEY`; barcode lookup uses OpenFoodFacts and supports `OPENFOODFACTS_USER_AGENT` override.
 - Analytics summary generation uses OpenAI with strict JSON-schema validation and a sanitized deterministic fallback when AI is unavailable.
+- Fitbit is the first fully implemented web provider; Apple Health, Google Fit, and Health Connect intentionally return native-required placeholders in web-only mode.
 
 ## Example requests
 Multipart analyze request:
@@ -92,3 +106,6 @@ curl -X POST "http://localhost:8000/analyze-image" \
 - **Barcode lookup failures**: verify outbound access to OpenFoodFacts and a valid `OPENFOODFACTS_USER_AGENT` value.
 - **Summary/history empty unexpectedly**: confirm data exists for the authenticated user/date/timezone.
 - **Frequent analytics summary fallback**: verify `OPENAI_API_KEY`, optional `OPENAI_ANALYTICS_MODEL`, and outbound access to OpenAI.
+- **Integration connect fails immediately**: verify `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, and `FITBIT_REDIRECT_URI` exactly match Fitbit app settings.
+- **Token encryption errors**: set `HEALTH_TOKEN_ENCRYPTION_KEY` (16+ chars) or legacy `SUPABASE_ENCRYPTION_KEY`.
+- **Native-only provider not connecting on web**: expected behavior for Apple Health/Google Fit/Health Connect until native app flows are added.

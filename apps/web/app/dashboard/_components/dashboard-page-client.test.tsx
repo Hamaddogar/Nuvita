@@ -5,6 +5,7 @@ const useDailySummaryMock = vi.fn();
 const useHydrationSummaryMock = vi.fn();
 const useWaterTrackingMock = vi.fn();
 const useWeightTrackingMock = vi.fn();
+const useHealthSummaryMock = vi.fn();
 
 vi.mock("../use-daily-summary", () => ({
   useDailySummary: (...args: unknown[]) => useDailySummaryMock(...args),
@@ -17,6 +18,9 @@ vi.mock("../use-water-tracking", () => ({
 }));
 vi.mock("../use-weight-tracking", () => ({
   useWeightTracking: (...args: unknown[]) => useWeightTrackingMock(...args),
+}));
+vi.mock("../use-health-summary", () => ({
+  useHealthSummary: (...args: unknown[]) => useHealthSummaryMock(...args),
 }));
 
 vi.mock("./today-coaching-preview", () => ({
@@ -33,6 +37,9 @@ vi.mock("./weight-tracking-card", () => ({
 }));
 vi.mock("./weight-trend-card", () => ({
   WeightTrendCard: () => <div>Weight Trend</div>,
+}));
+vi.mock("./health-sync-card", () => ({
+  HealthSyncCard: () => <div>Health Sync Card</div>,
 }));
 
 import { DashboardPageClient } from "./dashboard-page-client";
@@ -141,6 +148,27 @@ describe("DashboardPageClient", () => {
       saveWeightGoal: vi.fn(),
       clearMutationError: vi.fn(),
     });
+    useHealthSummaryMock.mockReturnValue({
+      state: {
+        status: "success",
+        data: {
+          success: true,
+          date: "2026-05-18",
+          timezone: "UTC",
+          steps_today: 7600,
+          active_calories_today: 510,
+          distance_meters_today: 5200,
+          exercise_minutes_today: 38,
+          workouts_this_week: 3,
+          latest_weight: null,
+          sleep_duration_minutes: 405,
+          resting_heart_rate_bpm: 60,
+          integration_status: [],
+        },
+        error: null,
+      },
+      refresh: vi.fn(),
+    });
 
     render(<DashboardPageClient fullName="Nuvita User" />);
 
@@ -151,6 +179,7 @@ describe("DashboardPageClient", () => {
     expect(screen.getByText("Hydration Trend")).toBeInTheDocument();
     expect(screen.getByText("Weight Tracking Card")).toBeInTheDocument();
     expect(screen.getByText("Weight Trend")).toBeInTheDocument();
+    expect(screen.getByText("Health Sync Card")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Scan Meal/i })).toBeInTheDocument();
   });
 });

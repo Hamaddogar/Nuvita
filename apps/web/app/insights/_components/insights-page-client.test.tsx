@@ -3,10 +3,14 @@ import { vi } from "vitest";
 
 const useAIInsightsTodayMock = vi.fn();
 const useAIInsightsWeeklyMock = vi.fn();
+const useHealthContextMock = vi.fn();
 
 vi.mock("../use-ai-insights", () => ({
   useAIInsightsToday: (...args: unknown[]) => useAIInsightsTodayMock(...args),
   useAIInsightsWeekly: (...args: unknown[]) => useAIInsightsWeeklyMock(...args),
+}));
+vi.mock("../use-health-context", () => ({
+  useHealthContext: (...args: unknown[]) => useHealthContextMock(...args),
 }));
 
 import { InsightsPageClient } from "./insights-page-client";
@@ -18,6 +22,10 @@ describe("InsightsPageClient", () => {
       refresh: vi.fn(),
     });
     useAIInsightsWeeklyMock.mockReturnValue({
+      state: { status: "loading", data: null, error: null },
+      refresh: vi.fn(),
+    });
+    useHealthContextMock.mockReturnValue({
       state: { status: "loading", data: null, error: null },
       refresh: vi.fn(),
     });
@@ -35,6 +43,10 @@ describe("InsightsPageClient", () => {
     });
     useAIInsightsWeeklyMock.mockReturnValue({
       state: { status: "error", data: null, error: "Weekly insights failed." },
+      refresh: vi.fn(),
+    });
+    useHealthContextMock.mockReturnValue({
+      state: { status: "error", data: null, error: "Health context failed." },
       refresh: vi.fn(),
     });
 

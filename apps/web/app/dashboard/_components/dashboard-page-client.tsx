@@ -7,6 +7,7 @@ import { CaloriesProgressCard } from "./calories-progress-card";
 import { DailySummaryHeader } from "./daily-summary-header";
 import { DashboardEmptyState } from "./dashboard-empty-state";
 import { DashboardErrorState } from "./dashboard-error-state";
+import { HealthSyncCard } from "./health-sync-card";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { HydrationCard } from "./hydration-card";
 import { HydrationTrendCard } from "./hydration-trend-card";
@@ -16,6 +17,7 @@ import { TodayMealsList } from "./today-meals-list";
 import { WeightTrackingCard } from "./weight-tracking-card";
 import { WeightTrendCard } from "./weight-trend-card";
 import { useDailySummary } from "../use-daily-summary";
+import { useHealthSummary } from "../use-health-summary";
 import { useHydrationSummary } from "../use-hydration-summary";
 import { useWaterTracking } from "../use-water-tracking";
 import { useWeightTracking } from "../use-weight-tracking";
@@ -62,6 +64,10 @@ export function DashboardPageClient({ fullName }: DashboardPageClientProps) {
     date: requestedDate,
     timezone,
   });
+  const healthSummary = useHealthSummary({
+    date: requestedDate,
+    timezone,
+  });
   const hydrationTrend = useWaterTracking({
     timezone,
     days: 14,
@@ -74,6 +80,7 @@ export function DashboardPageClient({ fullName }: DashboardPageClientProps) {
 
   const refreshAll = () => {
     dailySummary.refresh();
+    healthSummary.refresh();
     hydrationSummary.refresh();
     hydrationTrend.refresh();
     weightTracking.refresh();
@@ -90,6 +97,7 @@ export function DashboardPageClient({ fullName }: DashboardPageClientProps) {
   const dailySummaryData = hasSummary ? dailySummary.state.data : null;
   const isRefreshing =
     dailySummary.state.status === "loading" ||
+    healthSummary.state.status === "loading" ||
     hydrationSummary.state.status === "loading" ||
     hydrationTrend.state.status === "loading" ||
     weightTracking.state.status === "loading";
@@ -175,6 +183,7 @@ export function DashboardPageClient({ fullName }: DashboardPageClientProps) {
                 onClearMutationError={weightTracking.clearMutationError}
               />
               <WeightTrendCard state={weightTracking.state} onRefresh={weightTracking.refresh} />
+              <HealthSyncCard state={healthSummary.state} onRefresh={healthSummary.refresh} />
               <TodayCoachingPreview date={dailySummaryData.date} timezone={timezone} />
               {dailySummary.state.status === "empty" ? (
                 <DashboardEmptyState />

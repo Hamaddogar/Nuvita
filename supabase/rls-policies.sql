@@ -5,6 +5,12 @@ alter table public.meal_items enable row level security;
 alter table public.daily_nutrition_totals enable row level security;
 alter table public.water_logs enable row level security;
 alter table public.weight_logs enable row level security;
+alter table public.health_integrations enable row level security;
+alter table public.health_activity_logs enable row level security;
+alter table public.health_body_logs enable row level security;
+alter table public.health_sleep_logs enable row level security;
+alter table public.health_heart_logs enable row level security;
+alter table public.health_oauth_states enable row level security;
 alter table public.ai_feedback enable row level security;
 alter table public.food_corrections enable row level security;
 alter table public.favorite_meals enable row level security;
@@ -50,6 +56,30 @@ for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "weight_logs_all_own" on public.weight_logs;
 create policy "weight_logs_all_own" on public.weight_logs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_integrations_all_own" on public.health_integrations;
+create policy "health_integrations_all_own" on public.health_integrations
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_activity_logs_all_own" on public.health_activity_logs;
+create policy "health_activity_logs_all_own" on public.health_activity_logs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_body_logs_all_own" on public.health_body_logs;
+create policy "health_body_logs_all_own" on public.health_body_logs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_sleep_logs_all_own" on public.health_sleep_logs;
+create policy "health_sleep_logs_all_own" on public.health_sleep_logs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_heart_logs_all_own" on public.health_heart_logs;
+create policy "health_heart_logs_all_own" on public.health_heart_logs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "health_oauth_states_all_own" on public.health_oauth_states;
+create policy "health_oauth_states_all_own" on public.health_oauth_states
 for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "ai_feedback_all_own" on public.ai_feedback;

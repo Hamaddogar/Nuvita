@@ -87,6 +87,121 @@ create table if not exists public.meal_items (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.health_integrations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  provider_user_id text,
+  status text not null default 'disconnected' check (
+    status in (
+      'disconnected',
+      'connecting',
+      'connected',
+      'syncing',
+      'sync_success',
+      'sync_error',
+      'permission_required',
+      'native_required'
+    )
+  ),
+  access_token_encrypted bytea,
+  refresh_token_encrypted bytea,
+  token_expires_at timestamptz,
+  scopes text[] not null default '{}',
+  connected_at timestamptz,
+  last_synced_at timestamptz,
+  last_error text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider)
+);
+
+create table if not exists public.health_activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  source_record_id text not null,
+  date date not null,
+  steps integer not null default 0,
+  active_calories numeric not null default 0,
+  distance_meters numeric not null default 0,
+  exercise_minutes integer not null default 0,
+  workout_type text,
+  started_at timestamptz,
+  ended_at timestamptz,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider, source_record_id)
+);
+
+create table if not exists public.health_body_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  source_record_id text not null,
+  weight numeric,
+  body_fat_percentage numeric,
+  unit text not null default 'kg' check (unit in ('kg', 'lb', 'percent')),
+  recorded_at timestamptz not null,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider, source_record_id)
+);
+
+create table if not exists public.health_sleep_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  source_record_id text not null,
+  sleep_duration_minutes integer not null default 0,
+  started_at timestamptz,
+  ended_at timestamptz,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider, source_record_id)
+);
+
+create table if not exists public.health_heart_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  source_record_id text not null,
+  resting_heart_rate_bpm integer not null default 0,
+  recorded_at timestamptz not null,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, provider, source_record_id)
+);
+
+create table if not exists public.health_oauth_states (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (
+    provider in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop')
+  ),
+  state_token text not null unique,
+  code_verifier text,
+  redirect_to text,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.daily_nutrition_totals (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -214,6 +329,13 @@ create index if not exists idx_meal_items_meal_id on public.meal_items(meal_id);
 create index if not exists idx_daily_nutrition_totals_user_id_date on public.daily_nutrition_totals(user_id, date);
 create index if not exists idx_water_logs_user_id_logged_at_desc on public.water_logs(user_id, logged_at desc);
 create index if not exists idx_weight_logs_user_id_logged_at_desc on public.weight_logs(user_id, logged_at desc);
+create index if not exists idx_health_integrations_user_id_provider on public.health_integrations(user_id, provider);
+create index if not exists idx_health_activity_logs_user_id_date on public.health_activity_logs(user_id, date desc);
+create index if not exists idx_health_body_logs_user_id_recorded_at on public.health_body_logs(user_id, recorded_at desc);
+create index if not exists idx_health_sleep_logs_user_id_started_at on public.health_sleep_logs(user_id, started_at desc);
+create index if not exists idx_health_heart_logs_user_id_recorded_at on public.health_heart_logs(user_id, recorded_at desc);
+create index if not exists idx_health_oauth_states_user_id_provider on public.health_oauth_states(user_id, provider);
+create index if not exists idx_health_oauth_states_state_token on public.health_oauth_states(state_token);
 create index if not exists idx_ai_feedback_user_id_date on public.ai_feedback(user_id, date);
 create index if not exists idx_food_corrections_user_id on public.food_corrections(user_id);
 create index if not exists idx_favorite_meals_user_id on public.favorite_meals(user_id);
@@ -381,6 +503,31 @@ for each row execute function public.set_updated_at();
 drop trigger if exists barcode_foods_set_updated_at on public.barcode_foods;
 create trigger barcode_foods_set_updated_at
 before update on public.barcode_foods
+for each row execute function public.set_updated_at();
+
+drop trigger if exists health_integrations_set_updated_at on public.health_integrations;
+create trigger health_integrations_set_updated_at
+before update on public.health_integrations
+for each row execute function public.set_updated_at();
+
+drop trigger if exists health_activity_logs_set_updated_at on public.health_activity_logs;
+create trigger health_activity_logs_set_updated_at
+before update on public.health_activity_logs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists health_body_logs_set_updated_at on public.health_body_logs;
+create trigger health_body_logs_set_updated_at
+before update on public.health_body_logs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists health_sleep_logs_set_updated_at on public.health_sleep_logs;
+create trigger health_sleep_logs_set_updated_at
+before update on public.health_sleep_logs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists health_heart_logs_set_updated_at on public.health_heart_logs;
+create trigger health_heart_logs_set_updated_at
+before update on public.health_heart_logs
 for each row execute function public.set_updated_at();
 
 drop trigger if exists meals_recalculate_daily_totals on public.meals;
@@ -642,3 +789,199 @@ end;
 $$;
 
 grant execute on function public.create_meal_with_items(jsonb) to authenticated;
+
+drop function if exists public.upsert_health_integration_tokens(
+  text,
+  text,
+  text,
+  text,
+  text,
+  timestamptz,
+  text[],
+  timestamptz,
+  text,
+  jsonb,
+  text
+);
+create or replace function public.upsert_health_integration_tokens(
+  p_provider text,
+  p_status text default null,
+  p_provider_user_id text default null,
+  p_access_token text default null,
+  p_refresh_token text default null,
+  p_token_expires_at timestamptz default null,
+  p_scopes text[] default null,
+  p_connected_at timestamptz default null,
+  p_last_error text default null,
+  p_metadata jsonb default null,
+  p_encryption_key text default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_row public.health_integrations%rowtype;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    raise exception using errcode = '42501', message = 'Unauthorized: missing authenticated user.';
+  end if;
+
+  if p_provider not in ('fitbit', 'apple_health', 'google_fit', 'health_connect', 'garmin', 'oura', 'whoop') then
+    raise exception using errcode = '22023', message = 'Unsupported integration provider.';
+  end if;
+
+  if coalesce(trim(p_encryption_key), '') = '' then
+    raise exception using errcode = '22023', message = 'Encryption key is required.';
+  end if;
+
+  insert into public.health_integrations (
+    user_id,
+    provider,
+    provider_user_id,
+    status,
+    access_token_encrypted,
+    refresh_token_encrypted,
+    token_expires_at,
+    scopes,
+    connected_at,
+    last_error,
+    metadata
+  )
+  values (
+    v_user_id,
+    p_provider,
+    nullif(trim(coalesce(p_provider_user_id, '')), ''),
+    coalesce(nullif(trim(coalesce(p_status, '')), ''), 'connected'),
+    case
+      when nullif(coalesce(p_access_token, ''), '') is null then null
+      else pgp_sym_encrypt(p_access_token, p_encryption_key)
+    end,
+    case
+      when nullif(coalesce(p_refresh_token, ''), '') is null then null
+      else pgp_sym_encrypt(p_refresh_token, p_encryption_key)
+    end,
+    p_token_expires_at,
+    coalesce(p_scopes, '{}'::text[]),
+    coalesce(p_connected_at, now()),
+    p_last_error,
+    coalesce(p_metadata, '{}'::jsonb)
+  )
+  on conflict (user_id, provider) do update
+  set
+    provider_user_id = coalesce(
+      nullif(trim(coalesce(p_provider_user_id, '')), ''),
+      public.health_integrations.provider_user_id
+    ),
+    status = coalesce(nullif(trim(coalesce(p_status, '')), ''), public.health_integrations.status),
+    access_token_encrypted = case
+      when nullif(coalesce(p_access_token, ''), '') is null then public.health_integrations.access_token_encrypted
+      else pgp_sym_encrypt(p_access_token, p_encryption_key)
+    end,
+    refresh_token_encrypted = case
+      when nullif(coalesce(p_refresh_token, ''), '') is null then public.health_integrations.refresh_token_encrypted
+      else pgp_sym_encrypt(p_refresh_token, p_encryption_key)
+    end,
+    token_expires_at = coalesce(p_token_expires_at, public.health_integrations.token_expires_at),
+    scopes = coalesce(p_scopes, public.health_integrations.scopes),
+    connected_at = coalesce(p_connected_at, public.health_integrations.connected_at, now()),
+    last_error = coalesce(p_last_error, public.health_integrations.last_error),
+    metadata = coalesce(p_metadata, public.health_integrations.metadata),
+    updated_at = now()
+  returning * into v_row;
+
+  return jsonb_build_object(
+    'id', v_row.id,
+    'provider', v_row.provider,
+    'provider_user_id', v_row.provider_user_id,
+    'status', v_row.status,
+    'scopes', v_row.scopes,
+    'token_expires_at', v_row.token_expires_at,
+    'connected_at', v_row.connected_at,
+    'last_synced_at', v_row.last_synced_at,
+    'last_error', v_row.last_error,
+    'metadata', v_row.metadata,
+    'created_at', v_row.created_at,
+    'updated_at', v_row.updated_at
+  );
+end;
+$$;
+
+drop function if exists public.get_health_integration_tokens(text, text);
+create or replace function public.get_health_integration_tokens(
+  p_provider text,
+  p_encryption_key text
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_row public.health_integrations%rowtype;
+  v_access_token text;
+  v_refresh_token text;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    raise exception using errcode = '42501', message = 'Unauthorized: missing authenticated user.';
+  end if;
+
+  if coalesce(trim(p_encryption_key), '') = '' then
+    raise exception using errcode = '22023', message = 'Encryption key is required.';
+  end if;
+
+  select *
+  into v_row
+  from public.health_integrations
+  where user_id = v_user_id
+    and provider = p_provider
+  limit 1;
+
+  if not found then
+    return jsonb_build_object('found', false);
+  end if;
+
+  v_access_token := case
+    when v_row.access_token_encrypted is null then null
+    else pgp_sym_decrypt(v_row.access_token_encrypted, p_encryption_key)
+  end;
+  v_refresh_token := case
+    when v_row.refresh_token_encrypted is null then null
+    else pgp_sym_decrypt(v_row.refresh_token_encrypted, p_encryption_key)
+  end;
+
+  return jsonb_build_object(
+    'found', true,
+    'provider', v_row.provider,
+    'status', v_row.status,
+    'access_token', v_access_token,
+    'refresh_token', v_refresh_token,
+    'token_expires_at', v_row.token_expires_at,
+    'scopes', v_row.scopes,
+    'connected_at', v_row.connected_at,
+    'last_synced_at', v_row.last_synced_at,
+    'last_error', v_row.last_error,
+    'metadata', v_row.metadata
+  );
+end;
+$$;
+
+grant execute on function public.upsert_health_integration_tokens(
+  text,
+  text,
+  text,
+  text,
+  text,
+  timestamptz,
+  text[],
+  timestamptz,
+  text,
+  jsonb,
+  text
+) to authenticated;
+grant execute on function public.get_health_integration_tokens(text, text) to authenticated;

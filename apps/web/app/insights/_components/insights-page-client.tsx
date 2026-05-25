@@ -6,11 +6,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { NuvitaLogo } from "@/components/nuvita-logo";
 import { AIInsightSkeleton } from "./ai-insight-skeleton";
+import { HealthContextCard } from "./health-context-card";
 import { InsightsEmptyState } from "./insights-empty-state";
 import { InsightsErrorState } from "./insights-error-state";
 import { InsightsFeed } from "./insights-feed";
 import { WeeklySummaryCard } from "./weekly-summary-card";
 import { useAIInsightsToday, useAIInsightsWeekly } from "../use-ai-insights";
+import { useHealthContext } from "../use-health-context";
 import { formatInsightsDate, getLocalDateISO, humanizeGoalType, resolveTimezone } from "../utils";
 
 type InsightsPageClientProps = {
@@ -42,11 +44,16 @@ export function InsightsPageClient({ fullName }: InsightsPageClientProps) {
     date: requestedDate,
     timezone,
   });
+  const { state: healthContextState, refresh: refreshHealthContext } = useHealthContext({
+    date: requestedDate,
+    timezone,
+  });
 
   const refresh = useCallback(() => {
     refreshToday();
     refreshWeekly();
-  }, [refreshToday, refreshWeekly]);
+    refreshHealthContext();
+  }, [refreshHealthContext, refreshToday, refreshWeekly]);
 
   const todayData = todayState.status === "error" || todayState.status === "loading" ? null : todayState.data;
   const weeklyData = weeklyState.status === "error" || weeklyState.status === "loading" ? null : weeklyState.data;
@@ -61,7 +68,10 @@ export function InsightsPageClient({ fullName }: InsightsPageClientProps) {
   const goalTypeLabel = todayData ? humanizeGoalType(todayData.summary.goal_type) : "general wellness";
   const bothLoading = !todayData && !weeklyData && todayState.status === "loading" && weeklyState.status === "loading";
   const bothError = todayState.status === "error" && weeklyState.status === "error";
-  const isRefreshing = todayState.status === "loading" || weeklyState.status === "loading";
+  const isRefreshing =
+    todayState.status === "loading" ||
+    weeklyState.status === "loading" ||
+    healthContextState.status === "loading";
 
   return (
     <>
@@ -101,6 +111,8 @@ export function InsightsPageClient({ fullName }: InsightsPageClientProps) {
           ) : null}
 
           {!bothError && weeklyData ? <WeeklySummaryCard summary={weeklyData.summary} /> : null}
+
+          {!bothError ? <HealthContextCard state={healthContextState} /> : null}
 
           {!bothError && todayData ? (
             todayData.insights.length === 0 ? (

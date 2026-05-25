@@ -2,8 +2,8 @@
 Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, FastAPI backend, and Supabase persistence.
 
 ## Monorepo structure
-- `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, analytics, insights, profile)
-- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`, `/analytics/*`, `/water-logs/*`, `/weight-logs/*`, `/weight-summary`)
+- `apps/web`: Next.js app (auth, onboarding, dashboard, scan, history, analytics, insights, integrations, profile)
+- `apps/api`: FastAPI service (`/analyze-image`, `/foods/*`, `/meals`, `/daily-summary`, `/meal-history`, `/ai-insights/*`, `/analytics/*`, `/water-logs/*`, `/weight-logs/*`, `/weight-summary`, `/integrations/*`, `/health-data/*`)
 - `packages/shared`: shared TypeScript domain types and goal-calculation utilities
 - `supabase`: SQL schema, RLS policies, and setup notes
 - `docs`: additional planning/architecture notes
@@ -27,6 +27,8 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
    - Optional fallback routing:
      - `NEXT_PUBLIC_FASTAPI_URL`
      - `FASTAPI_FALLBACK_URL`
+3. For Fitbit OAuth setup, configure the callback URL in Fitbit app settings to your web route:
+   - `http://localhost:3000/api/integrations/fitbit/callback` (local example)
 
 ### Backend (`apps/api/.env`)
 1. Copy `apps/api/.env.example` to `apps/api/.env`.
@@ -38,9 +40,14 @@ Nuvita is a mobile-first AI nutrition tracking app with a Next.js frontend, Fast
    - `OPENAI_VISION_MODEL` (default is fine)
    - `OPENAI_INSIGHTS_MODEL` (default is fine)
    - `OPENAI_ANALYTICS_MODEL` (optional override for analytics smart-summary generation)
+   - `FITBIT_CLIENT_ID`
+   - `FITBIT_CLIENT_SECRET`
+   - `FITBIT_REDIRECT_URI` (must match Fitbit app config, typically `/api/integrations/fitbit/callback` on web)
+   - `HEALTH_TOKEN_ENCRYPTION_KEY` (16+ chars for encrypted integration token storage)
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - Optional operational key: `SUPABASE_SERVICE_ROLE_KEY`
+   - Legacy fallback alias (optional): `SUPABASE_ENCRYPTION_KEY`
 
 ### Supabase SQL setup
 Follow `supabase/README.md` run order:
@@ -71,6 +78,8 @@ Follow `supabase/README.md` run order:
 - Meal create payloads and analyze-image JSON payloads reject unknown extra fields.
 - User-facing error messages are intentionally sanitized to avoid leaking internal provider/runtime details.
 - AI insights and analytics smart summaries include resilient fallback behavior for degraded backend/AI conditions.
+- Wearable OAuth tokens are stored encrypted via Supabase RPC helpers and can be revoked via disconnect flow.
+- Native-only providers (Apple Health / Google Fit / Health Connect) are intentionally surfaced as native-required in web UX (no fake web sync).
 
 ## Production deployment checklist
 1. Apply Supabase schema + RLS SQL in the target environment.
@@ -95,6 +104,9 @@ Follow `supabase/README.md` run order:
 - **Analytics summary fallback appears frequently**: verify `OPENAI_API_KEY`, `OPENAI_ANALYTICS_MODEL`, and backend connectivity.
 - **No dashboard/history data**: confirm onboarding completed and meals were saved under same authenticated user.
 - **Hydration or weight modules fail**: verify the authenticated user has access to `water_logs`, `weight_logs`, and `user_goals` tables with current Supabase schema + RLS.
+- **Wearable connect fails**: verify `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, and `FITBIT_REDIRECT_URI` are set and match Fitbit app settings.
+- **Wearable token encryption errors**: set `HEALTH_TOKEN_ENCRYPTION_KEY` (or legacy `SUPABASE_ENCRYPTION_KEY`) with at least 16 characters.
+- **Apple/Google provider shows native-required**: expected on web; those providers require native app integration flows.
 
 ## Manual QA checklist
 1. Signup/login/logout works and protected routes redirect correctly.
@@ -125,4 +137,12 @@ Follow `supabase/README.md` run order:
    - monthly hydration/weight trend chart renders and unit toggle works
    - streak and achievement sections render
    - smart summary renders and shows fallback messaging when AI path is degraded
-8. Profile renders and logout works.
+8. Integrations:
+   - `/integrations` loads providers and health summary card
+   - Fitbit connect redirect starts and callback returns to integrations page
+   - sync/disconnect actions update status messaging
+   - native-only providers show honest native-required messaging
+9. Dashboard/Insights health context:
+   - dashboard wearable card renders synced metrics and provider status
+   - insights wearable context card renders non-medical context lines when synced
+10. Profile renders and logout works.

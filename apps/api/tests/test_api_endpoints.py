@@ -1089,3 +1089,364 @@ def test_analytics_endpoints_return_service_payloads(
     assert streaks_response.json()["streaks"][0]["current"] == 6
     assert achievements_response.json()["total_unlocked"] == 2
     assert summary_response.json()["source"] == "fallback"
+
+
+INTEGRATIONS_LIST_PAYLOAD = {
+    "success": True,
+    "integrations": [
+        {
+            "provider": "fitbit",
+            "display_name": "Fitbit",
+            "status": "connected",
+            "supports_web_oauth": True,
+            "requires_native_app": False,
+            "data_types": ["steps", "active_calories", "distance", "weight"],
+            "permissions": ["activity", "weight"],
+            "connected_at": "2026-05-19T08:00:00Z",
+            "last_synced_at": "2026-05-19T08:30:00Z",
+            "last_error": None,
+            "message": "Connect Fitbit to sync activity and body metrics into Nuvita.",
+        },
+        {
+            "provider": "apple_health",
+            "display_name": "Apple Health",
+            "status": "native_required",
+            "supports_web_oauth": False,
+            "requires_native_app": True,
+            "data_types": ["steps", "active_calories", "workouts", "weight"],
+            "permissions": [],
+            "connected_at": None,
+            "last_synced_at": None,
+            "last_error": None,
+            "message": "Apple Health sync requires native iOS app support. Web setup is not yet available.",
+        },
+        {
+            "provider": "google_fit",
+            "display_name": "Google Fit",
+            "status": "native_required",
+            "supports_web_oauth": False,
+            "requires_native_app": True,
+            "data_types": ["steps", "active_calories", "distance", "weight"],
+            "permissions": [],
+            "connected_at": None,
+            "last_synced_at": None,
+            "last_error": None,
+            "message": "Google Fit sync is planned through native Android health integrations.",
+        },
+        {
+            "provider": "health_connect",
+            "display_name": "Health Connect",
+            "status": "native_required",
+            "supports_web_oauth": False,
+            "requires_native_app": True,
+            "data_types": ["steps", "active_calories", "workouts", "weight"],
+            "permissions": [],
+            "connected_at": None,
+            "last_synced_at": None,
+            "last_error": None,
+            "message": "Health Connect requires native Android support and is not available in web-only mode yet.",
+        },
+    ],
+}
+
+INTEGRATION_CONNECT_PAYLOAD = {
+    "success": True,
+    "provider": "fitbit",
+    "status": "connecting",
+    "authorization_url": "https://www.fitbit.com/oauth2/authorize?client_id=client-1",
+    "message": "Continue in Fitbit to authorize data sharing.",
+    "state_expires_at": "2026-05-19T08:10:00Z",
+}
+
+INTEGRATION_CALLBACK_PAYLOAD = {
+    "success": True,
+    "provider": "fitbit",
+    "status": "sync_success",
+    "message": "Fitbit connected and initial sync completed.",
+    "synced_counts": {
+        "activity_records": 7,
+        "body_records": 2,
+        "sleep_records": 0,
+        "heart_records": 0,
+    },
+    "last_synced_at": "2026-05-19T08:35:00Z",
+}
+
+INTEGRATION_SYNC_PAYLOAD = {
+    "success": True,
+    "provider": "fitbit",
+    "status": "sync_success",
+    "message": "Sync completed successfully.",
+    "synced_counts": {
+        "activity_records": 14,
+        "body_records": 4,
+        "sleep_records": 0,
+        "heart_records": 0,
+    },
+    "last_synced_at": "2026-05-19T08:40:00Z",
+}
+
+INTEGRATION_DISCONNECT_PAYLOAD = {
+    "success": True,
+    "provider": "fitbit",
+    "status": "disconnected",
+    "message": "Fitbit disconnected successfully.",
+}
+
+HEALTH_SUMMARY_PAYLOAD = {
+    "success": True,
+    "date": "2026-05-19",
+    "timezone": "UTC",
+    "steps_today": 8200,
+    "active_calories_today": 432.5,
+    "distance_meters_today": 6240.0,
+    "exercise_minutes_today": 54,
+    "workouts_this_week": 5,
+    "latest_weight": {
+        "provider": "fitbit",
+        "weight": 78.2,
+        "unit": "kg",
+        "body_fat_percentage": 18.4,
+        "recorded_at": "2026-05-19T06:15:00Z",
+    },
+    "sleep_duration_minutes": 432,
+    "resting_heart_rate_bpm": 58,
+    "integration_status": [
+        {"provider": "fitbit", "status": "sync_success", "last_synced_at": "2026-05-19T08:40:00Z"},
+        {"provider": "apple_health", "status": "native_required", "last_synced_at": None},
+    ],
+}
+
+HEALTH_ACTIVITY_PAYLOAD = {
+    "success": True,
+    "timezone": "UTC",
+    "start_date": "2026-05-06",
+    "end_date": "2026-05-19",
+    "entries": [
+        {
+            "date": "2026-05-18",
+            "steps": 7600,
+            "active_calories": 390.0,
+            "distance_meters": 5800.0,
+            "exercise_minutes": 48,
+            "workouts_count": 1,
+            "providers": ["fitbit"],
+        },
+        {
+            "date": "2026-05-19",
+            "steps": 8200,
+            "active_calories": 432.5,
+            "distance_meters": 6240.0,
+            "exercise_minutes": 54,
+            "workouts_count": 1,
+            "providers": ["fitbit"],
+        },
+    ],
+}
+
+HEALTH_BODY_PAYLOAD = {
+    "success": True,
+    "timezone": "UTC",
+    "start_date": "2026-04-20",
+    "end_date": "2026-05-19",
+    "latest": {
+        "id": "body-2",
+        "provider": "fitbit",
+        "source_record_id": "fitbit-weight-2",
+        "weight": 78.2,
+        "body_fat_percentage": 18.4,
+        "unit": "kg",
+        "recorded_at": "2026-05-19T06:15:00Z",
+    },
+    "entries": [
+        {
+            "id": "body-2",
+            "provider": "fitbit",
+            "source_record_id": "fitbit-weight-2",
+            "weight": 78.2,
+            "body_fat_percentage": 18.4,
+            "unit": "kg",
+            "recorded_at": "2026-05-19T06:15:00Z",
+        },
+        {
+            "id": "body-1",
+            "provider": "fitbit",
+            "source_record_id": "fitbit-weight-1",
+            "weight": 78.6,
+            "body_fat_percentage": 18.8,
+            "unit": "kg",
+            "recorded_at": "2026-05-18T06:15:00Z",
+        },
+    ],
+}
+
+
+def test_integrations_endpoint_requires_authentication(client: TestClient) -> None:
+    response = client.get("/integrations")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required. Please sign in again."
+
+
+def test_integrations_and_health_data_endpoints_return_service_payloads(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import routes.integrations as integrations_routes
+
+    monkeypatch.setattr(integrations_routes, "extract_bearer_token", lambda _authorization: "token")
+
+    async def fake_authenticate_user(_access_token: str) -> dict[str, str]:
+        return {"id": "user-1"}
+
+    async def fake_list_integrations(_access_token: str, *, user_id: str | None) -> dict:
+        assert user_id == "user-1"
+        return INTEGRATIONS_LIST_PAYLOAD
+
+    async def fake_begin_integration_connect(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        provider: str,
+        redirect_to: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert provider == "fitbit"
+        assert redirect_to == "/integrations"
+        return INTEGRATION_CONNECT_PAYLOAD
+
+    async def fake_complete_integration_callback(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        provider: str,
+        code: str | None,
+        state: str | None,
+        error: str | None,
+        error_description: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert provider == "fitbit"
+        assert code == "oauth-code"
+        assert state == "oauth-state"
+        assert error is None
+        assert error_description is None
+        return INTEGRATION_CALLBACK_PAYLOAD
+
+    async def fake_sync_integration(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        provider: str,
+        days: int | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert provider == "fitbit"
+        assert days == 14
+        return INTEGRATION_SYNC_PAYLOAD
+
+    async def fake_disconnect_integration(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        provider: str,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert provider == "fitbit"
+        return INTEGRATION_DISCONNECT_PAYLOAD
+
+    async def fake_fetch_health_data_summary(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        requested_date: str | None,
+        timezone_name: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert requested_date == "2026-05-19"
+        assert timezone_name == "UTC"
+        return HEALTH_SUMMARY_PAYLOAD
+
+    async def fake_fetch_health_data_activity(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        days: int,
+        timezone_name: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert days == 14
+        assert timezone_name == "UTC"
+        return HEALTH_ACTIVITY_PAYLOAD
+
+    async def fake_fetch_health_data_body(
+        _access_token: str,
+        *,
+        user_id: str | None,
+        days: int,
+        timezone_name: str | None,
+    ) -> dict:
+        assert user_id == "user-1"
+        assert days == 30
+        assert timezone_name == "UTC"
+        return HEALTH_BODY_PAYLOAD
+
+    monkeypatch.setattr(integrations_routes, "authenticate_user", fake_authenticate_user)
+    monkeypatch.setattr(integrations_routes, "list_integrations", fake_list_integrations)
+    monkeypatch.setattr(integrations_routes, "begin_integration_connect", fake_begin_integration_connect)
+    monkeypatch.setattr(integrations_routes, "complete_integration_callback", fake_complete_integration_callback)
+    monkeypatch.setattr(integrations_routes, "sync_integration", fake_sync_integration)
+    monkeypatch.setattr(integrations_routes, "disconnect_integration", fake_disconnect_integration)
+    monkeypatch.setattr(integrations_routes, "fetch_health_data_summary", fake_fetch_health_data_summary)
+    monkeypatch.setattr(integrations_routes, "fetch_health_data_activity", fake_fetch_health_data_activity)
+    monkeypatch.setattr(integrations_routes, "fetch_health_data_body", fake_fetch_health_data_body)
+
+    integrations_response = client.get("/integrations", headers={"Authorization": "Bearer token"})
+    connect_response = client.post(
+        "/integrations/fitbit/connect",
+        headers={"Authorization": "Bearer token"},
+        json={"redirect_to": "/integrations"},
+    )
+    callback_response = client.get(
+        "/integrations/fitbit/callback?code=oauth-code&state=oauth-state",
+        headers={"Authorization": "Bearer token"},
+    )
+    sync_response = client.post(
+        "/integrations/fitbit/sync",
+        headers={"Authorization": "Bearer token"},
+        json={"days": 14},
+    )
+    disconnect_response = client.post(
+        "/integrations/fitbit/disconnect",
+        headers={"Authorization": "Bearer token"},
+    )
+    summary_response = client.get(
+        "/health-data/summary?date=2026-05-19&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+    activity_response = client.get(
+        "/health-data/activity?days=14&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+    body_response = client.get(
+        "/health-data/body?days=30&timezone=UTC",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert integrations_response.status_code == 200
+    assert connect_response.status_code == 200
+    assert callback_response.status_code == 200
+    assert sync_response.status_code == 200
+    assert disconnect_response.status_code == 200
+    assert summary_response.status_code == 200
+    assert activity_response.status_code == 200
+    assert body_response.status_code == 200
+
+    assert integrations_response.json()["integrations"][0]["provider"] == "fitbit"
+    assert connect_response.json()["status"] == "connecting"
+    assert callback_response.json()["synced_counts"]["activity_records"] == 7
+    assert sync_response.json()["synced_counts"]["body_records"] == 4
+    assert disconnect_response.json()["status"] == "disconnected"
+    assert summary_response.json()["steps_today"] == 8200
+    assert activity_response.json()["entries"][0]["date"] == "2026-05-18"
+    assert body_response.json()["latest"]["id"] == "body-2"

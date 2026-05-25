@@ -27,14 +27,23 @@ For frontend (`apps/web/.env.local`):
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `FASTAPI_URL`
+- Fitbit callback route must be configured in Fitbit app settings:
+  - `http://localhost:3000/api/integrations/fitbit/callback` (local example)
 
 For backend (`apps/api/.env`):
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (optional but recommended for operations/migrations)
+- `HEALTH_TOKEN_ENCRYPTION_KEY` (16+ chars for encrypted wearable token storage)
+- `FITBIT_CLIENT_ID`
+- `FITBIT_CLIENT_SECRET`
+- `FITBIT_REDIRECT_URI`
 - `OPENAI_API_KEY`
 - `USDA_API_KEY`
-- `FASTAPI_URL`
+- Legacy compatibility aliases accepted by API services:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_ENCRYPTION_KEY`
 
 ## RLS notes
 - RLS is enabled on all user-owned tables.
