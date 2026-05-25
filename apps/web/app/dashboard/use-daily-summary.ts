@@ -8,6 +8,8 @@ type UseDailySummaryParams = {
   date: string;
   timezone: string;
 };
+const LOAD_MAX_RETRIES = 2;
+const LOAD_RETRY_DELAY_MS = 1_200;
 
 const initialState: DailySummaryState = {
   status: "loading",
@@ -25,6 +27,7 @@ export function useDailySummary({ date, timezone }: UseDailySummaryParams) {
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: number | null = null;
     setState((previous) => {
       if (previous.status === "success" || previous.status === "empty") {
         return previous;
@@ -32,7 +35,7 @@ export function useDailySummary({ date, timezone }: UseDailySummaryParams) {
       return initialState;
     });
 
-    void (async () => {
+    const load = async (attempt: number) => {
       try {
         const data = await fetchDailySummary({ date, timezone });
         if (cancelled) {
@@ -56,6 +59,15 @@ export function useDailySummary({ date, timezone }: UseDailySummaryParams) {
         if (cancelled) {
           return;
         }
+
+        if (attempt < LOAD_MAX_RETRIES) {
+          retryTimer = window.setTimeout(() => {
+            if (!cancelled) {
+              void load(attempt + 1);
+            }
+          }, LOAD_RETRY_DELAY_MS * (attempt + 1));
+          return;
+        }
         const errorMessage = error instanceof Error ? error.message : "Unexpected dashboard error. Please retry.";
         setState((previous) => {
           if (previous.status === "success" || previous.status === "empty") {
@@ -68,10 +80,15 @@ export function useDailySummary({ date, timezone }: UseDailySummaryParams) {
           };
         });
       }
-    })();
+    };
+
+    void load(0);
 
     return () => {
       cancelled = true;
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer);
+      }
     };
   }, [date, timezone, refreshTick]);
 
